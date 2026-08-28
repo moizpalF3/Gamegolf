@@ -1,0 +1,30 @@
+{
+  "platform": "android",
+
+  "appium": {
+    "appium_server_url": "http://localhost:4723",
+    "device_name": "TODO_device_name",
+    "platform_version": "14",
+    "app_package": "com.gamegolf.app",
+    "app_activity": ".MainActivity",
+    "no_reset": true
+  },
+
+  "credentials": {
+    "email": "test.user@example.com",
+    "password": "TODO_test_password"
+  },
+
+  "course_name": "Gort Golf Club",
+
+  "clubs": [
+    { "name": "Driver", "tag_id": "0x06A1FED3" },
+    { "name": "7 Iron", "tag_id": "0x0DA1FED3" },
+    { "name": "Wedge", "tag_id": "0x2AA1FED3" },
+    { "name": "Putter", "tag_id": "0xCA9FFED3" }
+  ],
+
+  "medallion_port": "COM4",
+
+  "holes_config_file": "../gamegolf_round_files/Gort_GC_Ireland_waypoints.xlsx"
+}

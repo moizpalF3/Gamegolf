@@ -1,0 +1,5 @@
+Appium-Python-Client>=3.1.0
+selenium>=4.15.0
+pyserial>=3.5
+pandas>=2.0.0
+openpyxl>=3.1.0
