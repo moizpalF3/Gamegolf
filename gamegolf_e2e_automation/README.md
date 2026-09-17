@@ -91,14 +91,45 @@ appium_driver_factory.py  Builds the Appium session for iOS/Android
 locators.py                Element locators (FILL THESE IN)
 pages/
   base_page.py              Shared find/click/wait helpers
-  login_page.py              Sign up / log in
+  login_page.py              Log in
+  signup_page.py              Sign up
   connect_device_page.py     Connect Medallion
   course_search_page.py      Search + select course, start round
   golf_bag_page.py            Pair tags to clubs, continue
   round_page.py                Wait for round start / Smart Caddie, end round
 gamegolf_hole_simulator.py  Reused as-is: GPS movement + shot injection over serial
-round_config.example.json  Sample config - copy to round_config.json
+round_config.example.json  Sample config for run_e2e_round.py - copy to round_config.json
+tests/
+  test_login.py              Login test cases (valid/invalid/empty credentials)
+  test_signup.py              Sign Up test cases (new user, duplicate email, password mismatch)
+  test_play_golf_live.py      Full play-golf-live scenario: login -> connect -> start round -> pair clubs -> play holes -> end round
+conftest.py                Shared pytest fixtures (config, platform, driver)
+test_config.example.json   Sample config for the pytest suite - copy to test_config.json
 ```
+
+## Running the test suite (pytest)
+
+The `tests/` suite is separate from `run_e2e_round.py`: it's a POM-based
+pytest suite covering Sign Up, Login, and the play-golf-live scenario as
+individual test cases with assertions, rather than a single orchestrated run.
+
+1. Copy `test_config.example.json` to `test_config.json` and fill in real
+   values (device/app capabilities, a real test account for login, sign-up
+   test data, and the play-golf course/clubs/medallion port). Same locator
+   caveat as above: `locators.py` must have real values first.
+2. Run everything:
+   ```
+   pytest
+   ```
+3. Run a specific file, or skip the hardware-dependent scenario:
+   ```
+   pytest tests/test_login.py tests/test_signup.py
+   pytest -m "not live_hardware"
+   ```
+4. Point at a different config file:
+   ```
+   pytest --test-config staging_config.json
+   ```
 
 ## Extending it
 

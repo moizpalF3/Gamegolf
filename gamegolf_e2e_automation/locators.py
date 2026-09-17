@@ -36,6 +36,7 @@ LOGIN = {
         "login_button": (AppiumBy.ID, "com.gamegolf.app:id/TODO_login_button"),
         "signup_link": (AppiumBy.ID, "com.gamegolf.app:id/TODO_signup_link"),
         "logged_in_indicator": (AppiumBy.ID, "com.gamegolf.app:id/TODO_home_screen_root"),
+        "error_message": (AppiumBy.ID, "com.gamegolf.app:id/TODO_login_error_message"),
     },
     "ios": {
         "email_field": (AppiumBy.ACCESSIBILITY_ID, "TODO_email_field"),
@@ -43,6 +44,35 @@ LOGIN = {
         "login_button": (AppiumBy.ACCESSIBILITY_ID, "TODO_login_button"),
         "signup_link": (AppiumBy.ACCESSIBILITY_ID, "TODO_signup_link"),
         "logged_in_indicator": (AppiumBy.ACCESSIBILITY_ID, "TODO_home_screen_root"),
+        "error_message": (AppiumBy.ACCESSIBILITY_ID, "TODO_login_error_message"),
+    },
+}
+
+# ---------------------------------------------------------------------------
+# Sign up screen
+# ---------------------------------------------------------------------------
+SIGNUP = {
+    "android": {
+        "first_name_field": (AppiumBy.ID, "com.gamegolf.app:id/TODO_first_name_field"),
+        "last_name_field": (AppiumBy.ID, "com.gamegolf.app:id/TODO_last_name_field"),
+        "email_field": (AppiumBy.ID, "com.gamegolf.app:id/TODO_signup_email_field"),
+        "password_field": (AppiumBy.ID, "com.gamegolf.app:id/TODO_signup_password_field"),
+        "confirm_password_field": (AppiumBy.ID, "com.gamegolf.app:id/TODO_confirm_password_field"),
+        "signup_button": (AppiumBy.ID, "com.gamegolf.app:id/TODO_signup_button"),
+        "login_link": (AppiumBy.ID, "com.gamegolf.app:id/TODO_signup_login_link"),
+        "signup_success_indicator": (AppiumBy.ID, "com.gamegolf.app:id/TODO_home_screen_root"),
+        "error_message": (AppiumBy.ID, "com.gamegolf.app:id/TODO_signup_error_message"),
+    },
+    "ios": {
+        "first_name_field": (AppiumBy.ACCESSIBILITY_ID, "TODO_first_name_field"),
+        "last_name_field": (AppiumBy.ACCESSIBILITY_ID, "TODO_last_name_field"),
+        "email_field": (AppiumBy.ACCESSIBILITY_ID, "TODO_signup_email_field"),
+        "password_field": (AppiumBy.ACCESSIBILITY_ID, "TODO_signup_password_field"),
+        "confirm_password_field": (AppiumBy.ACCESSIBILITY_ID, "TODO_confirm_password_field"),
+        "signup_button": (AppiumBy.ACCESSIBILITY_ID, "TODO_signup_button"),
+        "login_link": (AppiumBy.ACCESSIBILITY_ID, "TODO_signup_login_link"),
+        "signup_success_indicator": (AppiumBy.ACCESSIBILITY_ID, "TODO_home_screen_root"),
+        "error_message": (AppiumBy.ACCESSIBILITY_ID, "TODO_signup_error_message"),
     },
 }
 
