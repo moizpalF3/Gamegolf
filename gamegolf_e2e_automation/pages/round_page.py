@@ -22,8 +22,15 @@ class RoundPage(BasePage):
         print("[Round] Smart Caddie recommendation loaded")
 
     def end_round(self, timeout=15):
+        """
+        Opens the round's 3-dot menu (icon-only, addressed by relative
+        screen position - see menu_button_relative in locators.py), taps
+        "End Round" in the resulting "More Options" sheet, then confirms
+        the "Do you want to end your game?" dialog.
+        """
         print("[Round] Ending round...")
-        self.click("menu_button")
-        self.click("end_round_option")
-        self.click("end_round_confirm_button")
+        x_pct, y_pct = self.locators["menu_button_relative"]
+        self.tap_relative(x_pct, y_pct)
+        self.click("end_round_option", timeout=timeout)
+        self.click("end_round_confirm_button", timeout=timeout)
         print("[Round] Round ended")

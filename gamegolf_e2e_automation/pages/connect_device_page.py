@@ -6,15 +6,19 @@ class ConnectDevicePage(BasePage):
     def __init__(self, driver, platform):
         super().__init__(driver, platform, CONNECT_DEVICE)
 
-    def connect(self, timeout=30):
+    def connect(self, device_name="GYG Medallion", scan_timeout=20, timeout=30):
         """
-        Taps the Connect button and waits for the app to report the medallion
-        as connected. Note: the actual Bluetooth pairing/connection happens
-        for real between the phone and the physical Medallion device - this
-        just drives the UI side and waits for confirmation. The medallion
-        must be powered on and in range.
+        Real flow is 3 taps: "Connect" (Home) -> instructional screen ->
+        "Find GPS Tracker" triggers a real BLE scan -> "Choose GPS Tracker"
+        dialog lists found devices -> tapping the device row connects it.
+        The medallion must be powered on and in range for the scan to find
+        it. This drives the UI side; the actual BLE connection happens for
+        real against the physical device.
         """
         print("[ConnectDevice] Tapping connect...")
         self.click("connect_button")
+        self.click("find_tracker_button")
+        print(f"[ConnectDevice] Scanning for '{device_name}'...")
+        self.click_templated("device_row_template", timeout=scan_timeout, device_name=device_name)
         self.find("connected_indicator", timeout=timeout)
         print("[ConnectDevice] Medallion connected")

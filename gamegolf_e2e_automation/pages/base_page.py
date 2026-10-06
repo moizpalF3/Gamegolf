@@ -66,3 +66,16 @@ class BasePage:
         WebDriverWait(self.driver, timeout).until_not(
             EC.presence_of_element_located((by, value))
         )
+
+    def tap_relative(self, x_pct, y_pct):
+        """
+        Taps a point given as a fraction (0.0-1.0) of screen width/height,
+        converted to actual pixels via the device's current window size.
+        For icon-only Compose controls with no text/resource-id/content-desc
+        to locate by (e.g. the round screen's 3-dot menu button) — prefer a
+        real locator when one exists, this is a fallback.
+        """
+        size = self.driver.get_window_size()
+        x = int(size["width"] * x_pct)
+        y = int(size["height"] * y_pct)
+        self.driver.execute_script("mobile: clickGesture", {"x": x, "y": y})
