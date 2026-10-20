@@ -4,3 +4,5 @@ __pycache__/
 
 round_config.json
 test_config.json
+
+artifacts/

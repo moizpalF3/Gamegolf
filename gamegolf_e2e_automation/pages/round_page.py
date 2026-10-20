@@ -1,3 +1,8 @@
+import time
+from pathlib import Path
+
+from selenium.common.exceptions import TimeoutException
+
 from pages.base_page import BasePage
 from locators import ROUND_ACTIVE
 
@@ -20,6 +25,36 @@ class RoundPage(BasePage):
         print("[Round] Waiting for Smart Caddie recommendation...")
         self.find("smart_caddie_recommendation", timeout=timeout)
         print("[Round] Smart Caddie recommendation loaded")
+
+    def get_current_hole(self, timeout=10):
+        return int(self.find("hole_number_value", timeout=timeout).text)
+
+    def get_score(self, timeout=10):
+        return int(self.find("score_value", timeout=timeout).text)
+
+    def wait_for_score(self, expected_hole, expected_score, timeout=20, poll=1):
+        """
+        Polls the bottom bar until it shows expected_hole/expected_score or
+        the timeout passes (shots take a moment to register in the app).
+        Returns the last (hole, score) actually read, whether or not it
+        matched, so the caller can assert and report the real values.
+        """
+        deadline = time.time() + timeout
+        hole = score = None
+        while True:
+            try:
+                hole, score = self.get_current_hole(timeout=3), self.get_score(timeout=3)
+            except (TimeoutException, ValueError):
+                pass
+            if (hole, score) == (expected_hole, expected_score) or time.time() >= deadline:
+                return hole, score
+            time.sleep(poll)
+
+    def save_screenshot(self, path):
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        self.driver.save_screenshot(str(path))
+        return path
 
     def end_round(self, timeout=15):
         """

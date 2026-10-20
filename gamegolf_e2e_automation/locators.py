@@ -275,6 +275,17 @@ ROUND_ACTIVE = {
             AppiumBy.ANDROID_UIAUTOMATOR,
             'new UiSelector().textContains("Smart Caddie")',
         ),
+        # VERIFIED (from a saved page dump): the bottom bar renders "Hole:",
+        # its number, "Score:" and its number as four separate sibling
+        # TextViews, so each value is the label's next sibling.
+        "hole_number_value": (
+            AppiumBy.XPATH,
+            '//android.widget.TextView[@text="Hole:"]/following-sibling::android.widget.TextView[1]',
+        ),
+        "score_value": (
+            AppiumBy.XPATH,
+            '//android.widget.TextView[@text="Score:"]/following-sibling::android.widget.TextView[1]',
+        ),
         # VERIFIED but fragile: (x_pct, y_pct) of the 3-dot menu button,
         # captured on a 1080x2400 device. Use with BasePage.tap_relative();
         # not a (By, value) tuple like other locators, so don't pass this to

@@ -23,11 +23,11 @@ class TestPlayGolfLiveScenario:
     exercise the flow without a real serial connection.
     """
 
-    def test_play_full_round(self, driver, platform, config):
+    def test_play_full_round(self, driver, platform, config, screenshot_dir):
         creds = config["login"]["valid_credentials"]
         golf = config["play_golf"]
 
-        LoginPage(driver, platform).login(creds["email"], creds["password"])
+        LoginPage(driver, platform).ensure_logged_in(creds["email"], creds["password"])
         ConnectDevicePage(driver, platform).connect()
 
         search_page = CourseSearchPage(driver, platform)
@@ -57,16 +57,36 @@ class TestPlayGolfLiveScenario:
 
         cli = medallion.GameGolfCLI(port=holes_config["port"], dry_run=config.get("dry_run", False))
         cli.connect()
+        score_mismatches = []
         try:
             for hole_num in hole_order:
                 waypoints = holes_dict[hole_num]
                 label = medallion.hole_label_for(holes_config, hole_num)
                 medallion.play_hole(cli, waypoints, steps, seconds_between_steps, shot_settle, label)
+
+                # Every waypoint with a tag_id is one shot, so that's what the
+                # app's score for this hole should read.
+                expected_shots = sum(1 for wp in waypoints if "tag_id" in wp)
+                actual_hole, actual_score = round_page.wait_for_score(hole_num, expected_shots)
+
+                shot = round_page.save_screenshot(screenshot_dir / f"hole_{hole_num}_score.png")
+                print(f"[Assert] Hole {hole_num}: expected score {expected_shots}, "
+                      f"app shows hole {actual_hole} / score {actual_score} ({shot})")
+
+                if (actual_hole, actual_score) != (hole_num, expected_shots):
+                    score_mismatches.append(
+                        f"hole {hole_num}: expected score {expected_shots}, app showed "
+                        f"hole {actual_hole} / score {actual_score} (screenshot: {shot})"
+                    )
         finally:
             cli.disconnect()
 
+        # Only fail after every hole was played and screenshotted, and the
+        # round was ended, so one bad hole doesn't hide the others or leave
+        # a live round open on the account.
         round_page.end_round()
 
         assert not round_page.is_visible("round_screen_root", timeout=5), (
             "Expected the round screen to close after ending the round"
         )
+        assert not score_mismatches, "Score didn't match shots played:\n  " + "\n  ".join(score_mismatches)

@@ -41,6 +41,14 @@ def driver(platform, config):
     session.quit()
 
 
+@pytest.fixture(scope="session")
+def screenshot_dir():
+    """artifacts/screenshots/<timestamp>/ - one folder per pytest run."""
+    path = Path(__file__).parent / "artifacts" / "screenshots" / time.strftime("%Y%m%d_%H%M%S")
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 @pytest.fixture
 def unique_email(config):
     """A fresh email per test run so Sign Up tests don't collide with a prior run."""

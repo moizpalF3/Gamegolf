@@ -20,6 +20,13 @@ class LoginPage(BasePage):
         self.find("logged_in_indicator", timeout=20)
         print("[Login] Logged in successfully")
 
+    def ensure_logged_in(self, email, password):
+        """Skips the login form when the app is already on the logged-in home screen."""
+        if self.is_visible("logged_in_indicator", timeout=8):
+            print("[Login] Already logged in - skipping login form")
+            return
+        self.login(email, password)
+
     def go_to_signup(self):
         self.click("signup_link")
 
