@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from appium_driver_factory import build_driver
+from data_loader import load_overrides, merge_config
 
 
 def pytest_addoption(parser):
@@ -13,6 +14,12 @@ def pytest_addoption(parser):
         action="store",
         default="test_config.json",
         help="Path to the test config JSON (copy test_config.example.json to get started)",
+    )
+    parser.addoption(
+        "--test-data",
+        action="store",
+        default="test_data.xlsx",
+        help="Excel file with credentials / club tag IDs that override test_config.json (skipped if missing)",
     )
 
 
@@ -25,7 +32,12 @@ def config(pytestconfig):
             f"Copy test_config.example.json to {config_path.name} and fill it in."
         )
     with open(config_path, "r") as f:
-        return json.load(f)
+        cfg = json.load(f)
+
+    data_path = Path(pytestconfig.getoption("--test-data"))
+    if data_path.exists():
+        merge_config(cfg, load_overrides(data_path))
+    return cfg
 
 
 @pytest.fixture(scope="session")

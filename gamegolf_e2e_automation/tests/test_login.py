@@ -1,4 +1,9 @@
+import pytest
+
 from pages.login_page import LoginPage
+
+
+pytestmark = [pytest.mark.smoke, pytest.mark.login]
 
 
 class TestLogin:

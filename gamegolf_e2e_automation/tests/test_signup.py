@@ -1,5 +1,10 @@
+import pytest
+
 from pages.login_page import LoginPage
 from pages.signup_page import SignUpPage
+
+
+pytestmark = [pytest.mark.smoke, pytest.mark.signup]
 
 
 class TestSignUp:

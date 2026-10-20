@@ -3,11 +3,15 @@ from pathlib import Path
 import pytest
 
 import gamegolf_hole_simulator as medallion
+from data_loader import apply_club_tags
 from pages.login_page import LoginPage
 from pages.connect_device_page import ConnectDevicePage
 from pages.course_search_page import CourseSearchPage
 from pages.golf_bag_page import GolfBagPage
 from pages.round_page import RoundPage
+
+
+pytestmark = [pytest.mark.smoke, pytest.mark.play_golf]
 
 
 @pytest.mark.live_hardware
@@ -45,6 +49,8 @@ class TestPlayGolfLiveScenario:
         holes_config = medallion.load_config(Path(golf["holes_config_file"]))
         if golf.get("medallion_port"):
             holes_config["port"] = golf["medallion_port"]
+
+        apply_club_tags(holes_config["waypoints"], golf["clubs"])
 
         holes_dict = medallion.group_waypoints_into_holes(holes_config)
         hole_order = medallion.resolve_hole_order(holes_dict, golf.get("holes"))

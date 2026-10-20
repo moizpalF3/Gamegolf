@@ -153,6 +153,10 @@ def _row_to_waypoint(row):
     if tag_id is not None and str(tag_id).strip() != "" and str(tag_id).lower() != "nan":
         wp["tag_id"] = str(tag_id).strip()
 
+    club = row.get("club")
+    if club is not None and str(club).strip() != "" and str(club).lower() != "nan":
+        wp["club"] = str(club).strip()
+
     hole = row.get("hole")
     if hole is not None and str(hole).strip() != "" and str(hole).lower() != "nan":
         wp["hole"] = int(float(hole))
@@ -407,6 +411,8 @@ def main():
     parser.add_argument("--holes", type=parse_holes_arg, default=None,
                          help="Comma-separated hole numbers to run, e.g. --holes 2,6 (default: all holes, ascending)")
     parser.add_argument("--dry-run", action="store_true", help="Print commands without opening the serial port")
+    parser.add_argument("--test-data", default="test_data.xlsx",
+                         help="Excel file whose Clubs sheet maps waypoint 'club' names to tag IDs (default: test_data.xlsx)")
     args = parser.parse_args()
 
     config_path = Path(args.config)
@@ -421,6 +427,10 @@ def main():
         sys.exit(1)
 
     try:
+        if any("club" in wp and "tag_id" not in wp for wp in config.get("waypoints", [])):
+            from data_loader import apply_club_tags, load_overrides
+            clubs = load_overrides(args.test_data).get("play_golf", {}).get("clubs", []) if Path(args.test_data).exists() else []
+            apply_club_tags(config["waypoints"], clubs)
         run(config, args)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

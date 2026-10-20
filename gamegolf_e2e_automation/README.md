@@ -107,6 +107,32 @@ conftest.py                Shared pytest fixtures (config, platform, driver)
 test_config.example.json   Sample config for the pytest suite - copy to test_config.json
 ```
 
+## Test data in Excel (credentials + club tag IDs)
+
+`test_data.xlsx` (next to `conftest.py`) overrides the matching values in
+`test_config.json`, so day-to-day changes don't need JSON edits. Copy
+`test_data.example.xlsx` to `test_data.xlsx` and fill it in. The real file is
+gitignored because it holds passwords.
+
+- **Credentials** sheet: `type` (valid/invalid), `email`, `password`
+- **Signup** sheet: `setting`/`value` rows (first_name, last_name, email_domain, password, existing_email)
+- **Clubs** sheet: `club_name`, `tag_id`. Waypoint files refer to clubs by name
+  (`"club": "Driver"`), and the tag ID is looked up here.
+
+Use another file with `pytest --test-data other.xlsx`. The standalone
+`gamegolf_hole_simulator.py` accepts the same `--test-data` flag.
+
+## Running a subset of tests
+
+```
+pytest -m smoke                         # everything currently tagged smoke
+pytest -m "smoke and not live_hardware" # smoke, minus tests needing the Medallion
+pytest -m login                         # or: signup, play_golf
+pytest -k missed_fairway                # by name
+pytest tests/test_login.py::TestLogin   # by file / class / test
+pytest --collect-only -q                # preview without running
+```
+
 ## Running the test suite (pytest)
 
 The `tests/` suite is separate from `run_e2e_round.py`: it's a POM-based

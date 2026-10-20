@@ -6,16 +6,16 @@
     "3": { "course": "Gort Golf Club", "name": "Hole 3" }
   },
   "waypoints": [
-    { "hole": 1, "label": "Tee", "lat": 53.06182267529699, "lon": -8.871142235279192, "tag_id": "0xD5B7817D" },
-    { "hole": 1, "label": "Fairway", "lat": 53.06038837675875, "lon": -8.868292421143773, "tag_id": "0x89D3817D" },
-    { "hole": 1, "label": "Green", "lat": 53.06079961408344, "lon": -8.867366127304685, "tag_id": "0x20BB817D" },
+    { "hole": 1, "label": "Tee", "lat": 53.06182267529699, "lon": -8.871142235279192, "club": "Driver" },
+    { "hole": 1, "label": "Fairway", "lat": 53.06038837675875, "lon": -8.868292421143773, "club": "8 Iron" },
+    { "hole": 1, "label": "Green", "lat": 53.06079961408344, "lon": -8.867366127304685, "club": "Putter" },
 
-    { "hole": 2, "label": "Tee", "lat": 53.06098547305696, "lon": -8.867003438983858, "tag_id": "0xD5B7817D" },
-    { "hole": 2, "label": "Fairway", "lat": 53.06168597422851, "lon": -8.863997567486267, "tag_id": "0x89D3817D" },
-    { "hole": 2, "label": "Green", "lat": 53.06295283679327, "lon": -8.862961568030943, "tag_id": "0x20BB817D" },
+    { "hole": 2, "label": "Tee", "lat": 53.06098547305696, "lon": -8.867003438983858, "club": "Driver" },
+    { "hole": 2, "label": "Fairway", "lat": 53.06168597422851, "lon": -8.863997567486267, "club": "8 Iron" },
+    { "hole": 2, "label": "Green", "lat": 53.06295283679327, "lon": -8.862961568030943, "club": "Putter" },
 
-    { "hole": 3, "label": "Tee", "lat": 53.062561297191806, "lon": -8.863861193632625, "tag_id": "0xD5B7817D" },
-    { "hole": 3, "label": "Fairway - missed left", "lat": 53.06139045620865, "lon": -8.866573517837073, "tag_id": "0x89D3817D" },
-    { "hole": 3, "label": "Green", "lat": 53.061334523741266, "lon": -8.86874933353003, "tag_id": "0x20BB817D" }
+    { "hole": 3, "label": "Tee", "lat": 53.062561297191806, "lon": -8.863861193632625, "club": "Driver" },
+    { "hole": 3, "label": "Fairway - missed left", "lat": 53.06139045620865, "lon": -8.866573517837073, "club": "8 Iron" },
+    { "hole": 3, "label": "Green", "lat": 53.061334523741266, "lon": -8.86874933353003, "club": "Putter" }
   ]
 }

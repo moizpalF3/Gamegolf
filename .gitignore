@@ -6,3 +6,4 @@ round_config.json
 test_config.json
 
 artifacts/
+gamegolf_e2e_automation/test_data.xlsx
