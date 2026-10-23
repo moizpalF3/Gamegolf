@@ -11,7 +11,7 @@ from pages.golf_bag_page import GolfBagPage
 from pages.round_page import RoundPage
 
 
-pytestmark = [pytest.mark.smoke, pytest.mark.play_golf]
+pytestmark = [pytest.mark.smoke, pytest.mark.regression, pytest.mark.play_golf]
 
 
 @pytest.mark.live_hardware
@@ -27,7 +27,8 @@ class TestPlayGolfLiveScenario:
     exercise the flow without a real serial connection.
     """
 
-    def test_play_full_round(self, driver, platform, config, screenshot_dir):
+    def test_play_full_round(self, driver, platform, config, screenshot):
+        """TC_PG_001 - Play Gort holes 1-3 live; each hole's score must equal the shots played."""
         creds = config["login"]["valid_credentials"]
         golf = config["play_golf"]
 
@@ -75,7 +76,7 @@ class TestPlayGolfLiveScenario:
                 expected_shots = sum(1 for wp in waypoints if "tag_id" in wp)
                 actual_hole, actual_score = round_page.wait_for_score(hole_num, expected_shots)
 
-                shot = round_page.save_screenshot(screenshot_dir / f"hole_{hole_num}_score.png")
+                shot = screenshot(f"hole_{hole_num}_score")
                 print(f"[Assert] Hole {hole_num}: expected score {expected_shots}, "
                       f"app shows hole {actual_hole} / score {actual_score} ({shot})")
 

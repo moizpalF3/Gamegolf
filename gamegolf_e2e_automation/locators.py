@@ -105,9 +105,17 @@ SIGNUP = {
 CONNECT_DEVICE = {
     "android": {
         # VERIFIED: "Connect" button next to the "GPS Tracker" label on Home.
+        # Exact text: once connected the same spot reads "Connected", which
+        # textContains("Connect") would also match.
         "connect_button": (
             AppiumBy.ANDROID_UIAUTOMATOR,
-            'new UiSelector().textContains("Connect").className("android.widget.TextView")',
+            'new UiSelector().text("Connect").className("android.widget.TextView")',
+        ),
+        # VERIFIED: Home's "GPS Tracker" widget reads "Connected" while the
+        # Medallion is connected (e.g. still connected from a previous run).
+        "connected_label": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().text("Connected")',
         ),
         # VERIFIED: the real connect flow is 3 taps, not 1 — tapping
         # "Connect" opens an instructional screen with a "Find GPS Tracker"
@@ -160,10 +168,12 @@ COURSE_SEARCH = {
             'new UiSelector().textContains("Choose your golf course")',
         ),
         # VERIFIED: matches a course row both in "Nearby Courses" on Home
-        # and (presumably) in real search results, by visible text.
+        # and (presumably) in real search results, by visible text. Limited
+        # to TextView: the search box (an EditText) holds the same text, and
+        # matching it taps the box instead of the result.
         "result_row_template": (
             AppiumBy.ANDROID_UIAUTOMATOR,
-            'new UiSelector().textContains("{course_name}")',
+            'new UiSelector().className("android.widget.TextView").textContains("{course_name}")',
         ),
         # VERIFIED: renders disabled/greyed out until the Medallion is
         # connected (confirmed by connecting a real one and watching this

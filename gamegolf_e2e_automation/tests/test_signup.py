@@ -4,11 +4,12 @@ from pages.login_page import LoginPage
 from pages.signup_page import SignUpPage
 
 
-pytestmark = [pytest.mark.smoke, pytest.mark.signup]
+pytestmark = [pytest.mark.smoke, pytest.mark.regression, pytest.mark.signup]
 
 
 class TestSignUp:
     def test_signup_with_valid_new_user(self, driver, platform, config, unique_email):
+        """TC_SIGNUP_001 - A new user can sign up and lands on the home dashboard."""
         signup_data = config["signup"]
 
         LoginPage(driver, platform).go_to_signup()
@@ -26,6 +27,7 @@ class TestSignUp:
         )
 
     def test_signup_with_existing_email_shows_error(self, driver, platform, config):
+        """TC_SIGNUP_002 - Signing up with an already registered email shows an error."""
         signup_data = config["signup"]
 
         LoginPage(driver, platform).go_to_signup()
@@ -43,6 +45,7 @@ class TestSignUp:
         assert error_text, "Expected an error message when signing up with an email already in use"
 
     def test_signup_with_mismatched_passwords_shows_error(self, driver, platform, config, unique_email):
+        """TC_SIGNUP_003 - Mismatched password/confirm password shows an error."""
         signup_data = config["signup"]
 
         LoginPage(driver, platform).go_to_signup()

@@ -1,5 +1,7 @@
 # GameGolf End-to-End Round Automation
 
+> **To run the tests, see [HOW_TO_EXECUTE.md](HOW_TO_EXECUTE.md)** — one command per suite (`python run_tests.py --suite smoke`), with an HTML report and screenshots for every run.
+
 Drives the complete app flow — login, connect Medallion, search course, start
 round, pair tags, play holes, end round — using Appium for the UI and the
 Medallion's serial CLI for live GPS/shot simulation.

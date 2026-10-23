@@ -38,6 +38,8 @@ def build_driver(platform, config):
         options.device_name = config.get("device_name", "TODO_device_name")
         if config.get("platform_version"):
             options.platform_version = config["platform_version"]
+        if config.get("udid"):
+            options.udid = config["udid"]
 
         if config.get("app_path"):
             options.app = config["app_path"]

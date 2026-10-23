@@ -15,6 +15,9 @@ class ConnectDevicePage(BasePage):
         it. This drives the UI side; the actual BLE connection happens for
         real against the physical device.
         """
+        if self.is_visible("connected_label", timeout=5):
+            print("[ConnectDevice] Medallion already connected - skipping connect")
+            return
         print("[ConnectDevice] Tapping connect...")
         self.click("connect_button")
         self.click("find_tracker_button")
