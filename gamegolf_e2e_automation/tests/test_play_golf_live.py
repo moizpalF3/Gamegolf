@@ -113,7 +113,11 @@ class TestPlayGolfLiveScenario:
             for hole_num in hole_order:
                 waypoints = holes_dict[hole_num]
                 label = medallion.hole_label_for(holes_config, hole_num)
-                medallion.play_hole(cli, waypoints, steps, seconds_between_steps, shot_settle, label)
+                if holes_config.get("command_delay_seconds"):
+                    # Command-script scenario: send the commands as written.
+                    medallion.play_hole_commands(cli, waypoints, holes_config["command_delay_seconds"], label)
+                else:
+                    medallion.play_hole(cli, waypoints, steps, seconds_between_steps, shot_settle, label)
 
                 # Every waypoint with a tag_id is one shot, so that's what the
                 # app's score for this hole should read.
@@ -133,6 +137,10 @@ class TestPlayGolfLiveScenario:
             # Don't leave a live round open on the account when play breaks
             # off part way (e.g. Smart Caddie never finishes loading).
             if round_started:
+                try:
+                    screenshot("at_failure")  # the end-of-test screenshot comes after the round is ended
+                except Exception:
+                    pass
                 try:
                     round_page.end_round()
                 except Exception as e:

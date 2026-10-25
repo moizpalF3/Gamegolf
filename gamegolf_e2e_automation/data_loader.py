@@ -12,8 +12,12 @@ Play Golf scenarios (read by load_play_golf_scenarios):
   Courses      columns: course | hole | location | lat | lon
                The coordinate library: every named spot on every hole
                (Tee, Fairway, Fairway - missed left, Green, ...).
-  Scenarios    columns: scenario_id | description | course | run
-               One row per Play Golf test case; run = Yes / No.
+  Scenarios    columns: scenario_id | description | course | run | delay_seconds
+               One row per Play Golf test case; run = Yes / No. With
+               delay_seconds set, the Medallion jumps straight to each shot's
+               location and every command is followed by that pause (at
+               least 3s) - the way command-script test cases are written.
+               Left blank, it walks between locations instead.
   Shots        columns: scenario_id | hole | shot | location | club
                The shots to play: move the Medallion to `location` on
                `hole`, then swing `club`. Leave club blank to walk through a
@@ -24,6 +28,9 @@ Play Golf scenarios (read by load_play_golf_scenarios):
 from pathlib import Path
 
 from openpyxl import load_workbook
+
+# Minimum pause between two Medallion commands when delay_seconds is used.
+MIN_COMMAND_DELAY_SECONDS = 3
 
 
 def _rows(ws):
@@ -145,14 +152,19 @@ def load_play_golf_scenarios(path):
                     wp["club"] = s["club"]
                 waypoints.append(wp)
 
+        holes_config = {
+            "waypoints": waypoints,
+            "holes_info": {str(h): {"course": course, "name": f"Hole {h}"} for h in hole_order},
+        }
+        if r.get("delay_seconds"):
+            delay = _number(r["delay_seconds"], f"Scenarios ({scenario_id}): delay_seconds")
+            holes_config["command_delay_seconds"] = max(MIN_COMMAND_DELAY_SECONDS, delay)
+
         scenarios.append({
             "id": scenario_id,
             "description": r.get("description", ""),
             "course": course,
-            "holes_config": {
-                "waypoints": waypoints,
-                "holes_info": {str(h): {"course": course, "name": f"Hole {h}"} for h in hole_order},
-            },
+            "holes_config": holes_config,
         })
 
     wb.close()

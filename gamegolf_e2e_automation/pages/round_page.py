@@ -2,7 +2,7 @@ import re
 import time
 from pathlib import Path
 
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
 
 from pages.base_page import BasePage
 from locators import ROUND_ACTIVE
@@ -12,31 +12,48 @@ class RoundPage(BasePage):
     def __init__(self, driver, platform):
         super().__init__(driver, platform, ROUND_ACTIVE)
 
-    def wait_for_round_started(self, timeout=20):
+    def wait_for_round_started(self, timeout=90):
+        # Creating the round on the server can take a while (a spinner covers
+        # the screen meanwhile), so allow well over the usual few seconds.
         print("[Round] Waiting for round screen to load...")
         self.find("round_screen_root", timeout=timeout)
         print("[Round] Round screen loaded")
 
-    def wait_for_smart_caddie(self, timeout=240, appear_timeout=15, poll=1, keep_alive=None,
+    def wait_for_smart_caddie(self, timeout=240, appear_timeout=60, poll=1, keep_alive=None,
                               done_from_pct=95):
         """
         Waits for the Smart Caddie widget, then for its bottom-left loader
         ("Loading NN%") to reach 100%. Logs each new percentage. Counts as
-        loaded when it reads 100%, or when the loader disappears after
-        reaching done_from_pct (it can vanish between two polls at the end).
-        Disappearing earlier is a failure: that's what happens when the app
-        stops getting GPS fixes. Returns the last percentage read (None if the
-        loader never showed, i.e. Smart Caddie was already loaded).
+        loaded when it reads 100%, when its recommendation ("Plays Like ...")
+        shows, or when the loader disappears after reaching done_from_pct (it
+        can vanish between two polls at the end). The loader can also hide
+        for a while part way and come back, so only running out of time is a
+        failure. Returns the last percentage read (None if the loader never
+        showed, i.e. Smart Caddie was already loaded).
 
         The loader only advances while GPS fixes keep arriving (roughly 1% a
         second, so about 2 minutes in total); keep_alive is called on every
         poll to send one, e.g. by re-reporting the player's position.
         """
         print("[Round] Waiting for Smart Caddie...")
-        self.find("smart_caddie_recommendation", timeout=appear_timeout)
+        start = time.time()
+        while True:
+            if keep_alive:
+                keep_alive()
+            if self.driver.find_elements(*self._loc("smart_caddie_loaded")):
+                print("[Round] Smart Caddie recommendation already showing - loaded")
+                return 100
+            if self.driver.find_elements(*self._loc("smart_caddie_recommendation")):
+                break
+            if time.time() - start >= appear_timeout:
+                texts = sorted(set(re.findall(r'text="([^"]+)"', self.driver.page_source)))
+                raise AssertionError(f"Neither the Smart Caddie loader nor its recommendation showed within "
+                                     f"{appear_timeout}s; screen shows: {texts}")
+            time.sleep(poll)
 
         start = time.time()
         last_pct = None
+        missing_since = None
         while True:
             if keep_alive:
                 keep_alive()
@@ -44,32 +61,46 @@ class RoundPage(BasePage):
                 text = self.find("smart_caddie_progress", timeout=2).text
                 match = re.search(r"(\d+)\s*%", text)
                 pct = int(match.group(1)) if match else None
-            except TimeoutException:
+            except (TimeoutException, StaleElementReferenceException):
                 pct = None
 
-            if pct is not None and pct != last_pct:
-                print(f"[Round] Smart Caddie loading {pct}% ({time.time() - start:.0f}s)")
-                last_pct = pct
-            if pct is not None and pct >= 100:
-                break
-            if pct is None:
-                if last_pct is not None and last_pct >= done_from_pct:
+            if pct is not None:
+                if missing_since is not None:
+                    print(f"[Round] Smart Caddie loader back after {time.time() - missing_since:.0f}s")
+                missing_since = None
+                if pct != last_pct:
+                    print(f"[Round] Smart Caddie loading {pct}% ({time.time() - start:.0f}s)")
+                    last_pct = pct
+                if pct >= 100:
+                    break
+            elif last_pct is not None:
+                if self.driver.find_elements(*self._loc("smart_caddie_loaded")):
+                    break  # the loader has gone and the recommendation is showing, i.e. done
+                if last_pct >= done_from_pct:
                     break  # loader was nearly done and has now gone, i.e. done
-                if last_pct is not None:
-                    raise AssertionError(
-                        f"Smart Caddie loader disappeared at {last_pct}% without reaching 100% "
-                        f"(after {time.time() - start:.0f}s) - is the Medallion sending GPS fixes?"
-                    )
+                # The loader can disappear for a while part way (seen at 40%)
+                # and come back, so a missing loader alone isn't a failure;
+                # only the overall timeout below is.
+                if missing_since is None:
+                    missing_since = time.time()
+                    texts = sorted(set(re.findall(r'text="([^"]+)"', self.driver.page_source)))
+                    print(f"[Round] Smart Caddie loader hidden at {last_pct}% "
+                          f"({time.time() - start:.0f}s); screen shows: {texts}")
+            else:
                 if time.time() - start >= appear_timeout:
                     print("[Round] No Smart Caddie loader showing - already loaded")
                     return None
             if time.time() - start >= timeout:
+                state = "loader hidden" if missing_since else "loader showing"
                 raise AssertionError(
-                    f"Smart Caddie didn't reach 100% within {timeout}s (stuck at {last_pct}%)"
+                    f"Smart Caddie didn't finish loading within {timeout}s "
+                    f"(last read {last_pct}%, {state}) - is the Medallion sending GPS fixes?"
                 )
             time.sleep(poll)
 
         print(f"[Round] Smart Caddie loaded in {time.time() - start:.0f}s")
+        self.find("smart_caddie_loaded", timeout=30)
+        print("[Round] Smart Caddie recommendation showing")
         return last_pct
 
     def get_current_hole(self, timeout=10):
@@ -138,6 +169,12 @@ class RoundPage(BasePage):
 
     def end_round_if_active(self):
         """Ends a round left open by an earlier, interrupted run, so the test starts from Home."""
+        if self.is_visible("unfinished_round_dialog", timeout=3):
+            print("[Round] App reports an unfinished round from an earlier run - resuming it to end it")
+            self.click("continue_round_button")
+            self.wait_for_round_started()
+            self.end_round()
+            return
         if self.is_visible("round_screen_root", timeout=5) or self.is_visible("end_round_error", timeout=1):
             print("[Round] A round is still open from an earlier run - ending it first")
             if self.is_visible("end_round_error", timeout=1):

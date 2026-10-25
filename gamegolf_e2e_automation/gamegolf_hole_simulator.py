@@ -339,6 +339,23 @@ def play_hole(cli, waypoints, steps, seconds_between_steps, shot_settle, hole_la
     print(f"\n{hole_label} complete.")
 
 
+def play_hole_commands(cli, waypoints, command_delay, hole_label):
+    """
+    Plays a hole exactly as a command script lists it: jump straight to each
+    waypoint (one nmea fake_coordinates, no walking in between), then play its
+    shot if it has one, waiting command_delay seconds after every command.
+    """
+    print(f"\n=== Playing {hole_label} (command script, {command_delay}s between commands) ===")
+    for wp in waypoints:
+        print(f"\n--- {wp.get('label', 'Waypoint')} ---")
+        move_to(cli, wp["lat"], wp["lon"])
+        if not cli.dry_run:
+            time.sleep(command_delay)
+        if "tag_id" in wp:
+            play_shot(cli, wp["tag_id"], command_delay)
+    print(f"\n{hole_label} complete.")
+
+
 def resolve_hole_order(holes_dict, requested_holes):
     """
     Decide which holes to run and in what order.
