@@ -1,3 +1,4 @@
+import re
 import time
 from pathlib import Path
 
@@ -13,6 +14,67 @@ from pages.round_page import RoundPage
 
 
 pytestmark = [pytest.mark.smoke, pytest.mark.regression, pytest.mark.play_golf]
+
+
+def _play_in_background(driver, app_package, cli, holes_config, holes_dict, hole_order, round_page,
+                        screenshot, check, score_mismatches):
+    """
+    App-in-background scenario: send the app to the background (Home, not
+    closed), play every hole's commands, bring the app back and tap Continue
+    Round, then check:
+      - the last step's expect_hole / expect_score once the shots have
+        synced (e.g. on hole 5's tee, score 0), allowing time for the sync;
+      - every earlier hole's score, by stepping back through the holes with
+        the bottom bar's arrow (a screenshot of each shows its shots).
+    """
+    delay = holes_config.get("command_delay_seconds") or 3
+    driver.press_keycode(3)  # Home: the app keeps running in the background
+    time.sleep(3)
+    assert driver.current_package != app_package, "The app didn't go to the background"
+    print(f"[Background] App in background (front: {driver.current_package}); playing all shots")
+
+    for hole_num in hole_order:
+        label = medallion.hole_label_for(holes_config, hole_num)
+        medallion.play_hole_commands(cli, holes_dict[hole_num], delay, label)
+
+    driver.activate_app(app_package)
+    print("[Background] App back in the foreground")
+    # Coming back, the app asks to continue the open round: tap Continue Round.
+    if round_page.is_visible("continue_round_button", timeout=20):
+        screenshot("continue_round_prompt")
+        round_page.click("continue_round_button")
+        print("[Background] Tapped Continue Round")
+    else:
+        print("[Background] No Continue Round prompt - the app reopened the round screen directly")
+    print("[Background] Waiting for the shots to sync")
+    round_page.wait_for_round_started()
+    screenshot("back_in_foreground")
+
+    last_hole = hole_order[-1]
+    last = holes_dict[last_hole][-1]
+    expected_end = last.get("expect") or (
+        last_hole, sum(1 for wp in holes_dict[last_hole] if "tag_id" in wp))
+    check(f"after_sync_hole_{expected_end[0]}", *expected_end, last, wait=120)
+
+    # Review the earlier holes without sending positions (that could switch
+    # holes automatically): step back with the arrow and read each score.
+    for hole_num in reversed(hole_order[:-1]):
+        for _ in range(18):
+            if round_page.get_current_hole() <= hole_num:
+                break
+            round_page.change_hole("previous")
+        expected = sum(1 for wp in holes_dict[hole_num] if "tag_id" in wp)
+        actual = round_page.wait_for_score(hole_num, expected, timeout=10)
+        shot = screenshot(f"review_hole_{hole_num}")
+        print(f"[Assert] review hole {hole_num}: expected score {expected}, "
+              f"app shows hole {actual[0]} / score {actual[1]} ({shot})")
+        if actual != (hole_num, expected):
+            score_mismatches.append(f"review hole {hole_num}: expected score {expected}, app showed "
+                                    f"hole {actual[0]} / score {actual[1]} (screenshot: {shot})")
+
+
+def _safe_name(text):
+    return re.sub(r"[^A-Za-z0-9]+", "_", text or "step").strip("_").lower()
 
 
 def _connect_with_retry(cli, attempts=5, wait_seconds=3):
@@ -78,11 +140,11 @@ class TestPlayGolfLiveScenario:
         cli = medallion.GameGolfCLI(port=holes_config["port"], dry_run=config.get("dry_run", False))
         _connect_with_retry(cli)
 
-        # Stand the player on the first shot's spot (normally the first tee)
-        # before the round starts: Smart Caddie only loads for the player's
-        # current position, and the Medallion otherwise still reports wherever
-        # the previous run finished.
-        start = holes_dict[hole_order[0]][0]
+        # Stand the player on the first shot's spot (normally the first tee),
+        # or the scenario's start_hole tee, before the round starts: Smart
+        # Caddie only loads for the player's current position, and the
+        # Medallion otherwise still reports wherever the previous run finished.
+        start = holes_config.get("start") or holes_dict[hole_order[0]][0]
         stand_at_start = lambda: medallion.move_to(cli, start["lat"], start["lon"])
         stand_at_start()
 
@@ -110,29 +172,109 @@ class TestPlayGolfLiveScenario:
             round_page.wait_for_smart_caddie(keep_alive=stand_at_start)
             screenshot("smart_caddie_loaded")
 
+            delay = holes_config.get("command_delay_seconds")
+            pause = delay or 3
+            hold = holes_config.get("hold_seconds")
+
+            def check(name, exp_hole, exp_score, position, wait):
+                """
+                Waits up to `wait` seconds for the app to show exp_hole /
+                exp_score, re-reporting `position` meanwhile (the app reacts
+                to fresh GPS fixes, e.g. an automatic hole switch). With
+                hold_seconds, it then stays there that long and checks
+                again, so something that must NOT happen (like a hole
+                switch) has time to show up. Records any mismatch.
+                """
+                deadline = time.time() + wait
+                while True:
+                    actual = round_page.wait_for_score(exp_hole, exp_score, timeout=2)
+                    if actual == (exp_hole, exp_score) or time.time() >= deadline:
+                        break
+                    medallion.move_to(cli, position["lat"], position["lon"])
+                    time.sleep(pause)
+                if hold and actual == (exp_hole, exp_score):
+                    print(f"[Assert] {name}: holding at '{position.get('label')}' for {hold}s")
+                    held_until = time.time() + hold
+                    while time.time() < held_until:
+                        medallion.move_to(cli, position["lat"], position["lon"])
+                        time.sleep(pause)
+                    actual = round_page.wait_for_score(exp_hole, exp_score, timeout=3)
+
+                shot = screenshot(name)
+                print(f"[Assert] {name}: expected hole {exp_hole} / score {exp_score}, "
+                      f"app shows hole {actual[0]} / score {actual[1]} ({shot})")
+                if actual != (exp_hole, exp_score):
+                    score_mismatches.append(
+                        f"{name}: expected hole {exp_hole} / score {exp_score}, app showed "
+                        f"hole {actual[0]} / score {actual[1]} (screenshot: {shot})"
+                    )
+
+            def check_text(name, needle, position, wait):
+                """
+                Waits up to `wait` seconds for text containing `needle` (any
+                case) to show on screen, e.g. a pop-up, re-reporting
+                `position` meanwhile. Records a mismatch if it never shows,
+                then dismisses the pop-up so the test can carry on.
+                """
+                deadline = time.time() + wait
+                while True:
+                    texts = re.findall(r'text="([^"]+)"', driver.page_source)
+                    found = [t for t in texts if needle.lower() in t.lower()]
+                    if found or time.time() >= deadline:
+                        break
+                    medallion.move_to(cli, position["lat"], position["lon"])
+                    time.sleep(pause)
+                shot = screenshot(name)
+                print(f"[Assert] {name}: expected text containing '{needle}'; "
+                      f"{'found ' + repr(found) if found else 'not found'}; screen shows: {sorted(set(texts))}")
+                if not found:
+                    score_mismatches.append(
+                        f"{name}: no text containing '{needle}' showed within {wait}s (screenshot: {shot})"
+                    )
+                    return
+                round_page.dismiss_popup()
+
+            if holes_config.get("background"):
+                _play_in_background(driver, config["appium"]["app_package"], cli, holes_config, holes_dict,
+                                    hole_order, round_page, screenshot, check, score_mismatches)
+                hole_order = []  # all played and checked above
+
             for hole_num in hole_order:
                 waypoints = holes_dict[hole_num]
                 label = medallion.hole_label_for(holes_config, hole_num)
-                if holes_config.get("command_delay_seconds"):
-                    # Command-script scenario: send the commands as written.
-                    medallion.play_hole_commands(cli, waypoints, holes_config["command_delay_seconds"], label)
+                if delay:
+                    # Command-script scenario: send the commands as written,
+                    # checking the app after any step that states what it
+                    # should show (expect_hole / expect_score in Shots).
+                    for wp in waypoints:
+                        if wp.get("action") in ("previous_hole", "next_hole"):
+                            # Move there, tap the hole arrow in the app, then play the shot.
+                            print(f"\n--- {label} - {wp.get('label')} ---")
+                            medallion.move_to(cli, wp["lat"], wp["lon"])
+                            time.sleep(delay)
+                            round_page.change_hole(wp["action"].split("_")[0])
+                            screenshot(f"hole_{hole_num}_{wp['action']}")
+                            time.sleep(delay)
+                            if "tag_id" in wp:
+                                medallion.play_shot(cli, wp["tag_id"], delay)
+                        elif wp.get("action"):
+                            raise ValueError(f"Unknown action '{wp['action']}' (use previous_hole / next_hole)")
+                        else:
+                            medallion.play_hole_commands(cli, [wp], delay, f"{label} - {wp.get('label')}")
+                        step = f"hole_{hole_num}_{_safe_name(wp.get('label'))}"
+                        if "expect_text" in wp:
+                            check_text(step + "_popup", wp["expect_text"], wp, wait=60)
+                        if "expect" in wp:
+                            check(step, *wp["expect"], wp, wait=60)
                 else:
                     medallion.play_hole(cli, waypoints, steps, seconds_between_steps, shot_settle, label)
 
-                # Every waypoint with a tag_id is one shot, so that's what the
-                # app's score for this hole should read.
-                expected_shots = sum(1 for wp in waypoints if "tag_id" in wp)
-                actual_hole, actual_score = round_page.wait_for_score(hole_num, expected_shots)
-
-                shot = screenshot(f"hole_{hole_num}_score")
-                print(f"[Assert] Hole {hole_num}: expected score {expected_shots}, "
-                      f"app shows hole {actual_hole} / score {actual_score} ({shot})")
-
-                if (actual_hole, actual_score) != (hole_num, expected_shots):
-                    score_mismatches.append(
-                        f"hole {hole_num}: expected score {expected_shots}, app showed "
-                        f"hole {actual_hole} / score {actual_score} (screenshot: {shot})"
-                    )
+                # Unless the hole's last step already stated what the app
+                # should show, every waypoint with a tag_id is one shot, so
+                # that's what the app's score for this hole should read.
+                if "expect" not in waypoints[-1] and "expect_text" not in waypoints[-1]:
+                    expected_shots = sum(1 for wp in waypoints if "tag_id" in wp)
+                    check(f"hole_{hole_num}_score", hole_num, expected_shots, waypoints[-1], wait=20)
         except Exception:
             # Don't leave a live round open on the account when play breaks
             # off part way (e.g. Smart Caddie never finishes loading).

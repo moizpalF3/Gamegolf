@@ -1,7 +1,8 @@
-import re
+﻿import re
 import time
 from pathlib import Path
 
+from appium.webdriver.common.appiumby import AppiumBy
 from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
 
 from pages.base_page import BasePage
@@ -24,7 +25,7 @@ class RoundPage(BasePage):
         """
         Waits for the Smart Caddie widget, then for its bottom-left loader
         ("Loading NN%") to reach 100%. Logs each new percentage. Counts as
-        loaded when it reads 100%, when its recommendation ("Plays Like ...")
+        loaded when it reads 100%, when its recommendation (strategy selector, e.g. "Optimal")
         shows, or when the loader disappears after reaching done_from_pct (it
         can vanish between two polls at the end). The loader can also hide
         for a while part way and come back, so only running out of time is a
@@ -166,6 +167,34 @@ class RoundPage(BasePage):
                 return
             time.sleep(2)
         raise AssertionError(f"The round screen was still open {timeout}s after ending the round")
+
+    def change_hole(self, direction):
+        """Taps the bottom bar's previous/next hole arrow; returns the hole shown afterwards."""
+        before = self.get_current_hole()
+        self.click("previous_hole_button" if direction == "previous" else "next_hole_button")
+        deadline = time.time() + 10
+        hole = before
+        while time.time() < deadline and hole == before:
+            time.sleep(1)
+            hole = self.get_current_hole()
+        print(f"[Round] Tapped {direction} hole arrow: hole {before} -> {hole}")
+        return hole
+
+    def dismiss_popup(self):
+        """
+        Closes a pop-up shown over the round screen (e.g. "hole already
+        complete") by tapping its button, or with Android Back if it has none
+        we recognise.
+        """
+        for label in ("OK", "Ok", "Okay", "Got it", "Close", "Dismiss", "Continue", "Next Hole", "Move On"):
+            buttons = self.driver.find_elements(
+                AppiumBy.ANDROID_UIAUTOMATOR, f'new UiSelector().text("{label}")')
+            if buttons:
+                print(f"[Round] Closing pop-up with '{label}'")
+                buttons[0].click()
+                return
+        print("[Round] Closing pop-up with Back")
+        self.driver.back()
 
     def end_round_if_active(self):
         """Ends a round left open by an earlier, interrupted run, so the test starts from Home."""

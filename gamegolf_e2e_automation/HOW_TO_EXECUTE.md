@@ -70,10 +70,25 @@ scenario needs no code changes.
    skips it. `course` must match the Courses sheet and be findable in the
    app's course search.
 
-   | scenario_id | description | course | run | delay_seconds |
-   |---|---|---|---|---|
-   | TC_PG_001 | Holes 1-3: Driver, 8 Iron, Putter | Gort Golf Club | Yes | |
-   | TC_PG_003 | Stray shots | Gort Golf Club | Yes | 3 |
+   | scenario_id | description | course | run | delay_seconds | hold_seconds |
+   |---|---|---|---|---|---|
+   | TC_PG_001 | Holes 1-3: Driver, 8 Iron, Putter | Gort Golf Club | Yes | | |
+   | TC_PG_004 | Hole completed: no auto hole switch | Gort Golf Club | Yes | 3 | 30 |
+
+   `start_hole` (optional): the player stands on that hole's tee when the
+   round starts (default: the first shot's location).
+
+   `background` (optional, Yes/No): after Smart Caddie loads, the app is sent to
+   the background (Home, not closed), all the shots are played, then the app
+   is brought back and **Continue Round** is tapped when the app asks. The
+   test then waits up to 2 minutes for the shots to sync,
+   checks the last step's expected hole/score, and steps back through the
+   earlier holes with the arrow to check each score (TC_PG_007).
+
+   `hold_seconds` (optional): once a hole's score matches, the Medallion keeps
+   reporting the hole's last position for that long, and the hole and score
+   are checked again. Use it to prove something does *not* happen, e.g. the
+   app must stay on hole 2 after the player walks back to hole 1's tee.
 
    `delay_seconds` sets how the Medallion moves:
    - **Blank:** it walks between locations in small GPS steps, like a player.
@@ -95,6 +110,17 @@ scenario needs no code changes.
    - The same location can be used twice (e.g. two putts from the Green).
    - Leave `club` blank to walk through a location without a shot.
    - The expected score for each hole is its number of shots with a club.
+   - Optional `expect_hole` / `expect_score` on a row: after that step the app
+     must show that hole and score within 60s (e.g. TC_PG_005: after walking
+     back to hole 1's tee with hole 1 still open, the app must switch back to
+     Hole 1, Score 3). On a hole's last row it replaces the usual check.
+   - Optional `expect_text` on a row: after that step, text containing it must
+     appear on screen within 60s, e.g. TC_PG_006 expects a pop-up containing
+     "complete" when a shot is played on an already completed hole. The test
+     records the pop-up's text, takes a screenshot and closes it.
+   - Optional `action` on a row: something to do in the app after moving to the
+     location and before the shot. `previous_hole` / `next_hole` tap the arrows
+     in the bottom bar (TC_PG_006 goes back to hole 1 before playing the iron).
 
 Each enabled scenario shows up as its own test in the report, e.g.
 `test_play_full_round[TC_PG_001]`, and can be run on its own with
