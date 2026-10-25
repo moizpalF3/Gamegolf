@@ -37,6 +37,14 @@ class BasePage:
         el.send_keys(text)
         return el
 
+    def hide_keyboard(self):
+        """Closes the on-screen keyboard if it's open (it can cover buttons near the bottom)."""
+        try:
+            if self.driver.is_keyboard_shown():
+                self.driver.hide_keyboard()
+        except Exception:
+            pass
+
     def is_visible(self, key, timeout=5):
         try:
             self.find(key, timeout=timeout)

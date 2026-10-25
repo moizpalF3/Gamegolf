@@ -138,8 +138,15 @@ def platform(config):
 
 @pytest.fixture
 def driver(platform, config):
-    """A fresh Appium session per test."""
-    session = build_driver(platform, config.get("appium", {}))
+    """A fresh Appium session per test, with the app in the foreground."""
+    appium = config.get("appium", {})
+    session = build_driver(platform, appium)
+    # With no_reset, Appium leaves an app that's already running in the
+    # background where it is (e.g. behind the home screen), so bring it to
+    # the front. This doesn't restart it.
+    app_id = appium.get("app_package") or appium.get("bundle_id")
+    if app_id:
+        session.activate_app(app_id)
     yield session
     session.quit()
 
@@ -185,7 +192,11 @@ def pytest_runtest_makereport(item, call):
     driver = item.funcargs.get("driver")
     if driver is not None:
         try:
-            _capture(driver, item, "FAILED_final" if report.failed else "final")
+            path = _capture(driver, item, "FAILED_final" if report.failed else "final")
+            if report.failed:
+                # The screen's element tree, for fixing locators without
+                # having to reproduce the failure.
+                path.with_suffix(".xml").write_text(driver.page_source, encoding="utf-8")
         except Exception as e:
             print(f"[Screenshot] Could not capture final screen: {e}")
 

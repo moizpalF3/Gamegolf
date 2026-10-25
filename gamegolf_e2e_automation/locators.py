@@ -45,13 +45,75 @@ from appium.webdriver.common.appiumby import AppiumBy
 # ---------------------------------------------------------------------------
 LOGIN = {
     "android": {
-        # Not yet captured: the live test device was already logged in
-        # (persisted session, no_reset=true), so the Welcome/Login screen
-        # itself was never reached this pass. Log out first to fill these in.
-        "email_field": (AppiumBy.ID, "com.gamegolf.app:id/TODO_email_field"),
-        "password_field": (AppiumBy.ID, "com.gamegolf.app:id/TODO_password_field"),
-        "login_button": (AppiumBy.ID, "com.gamegolf.app:id/TODO_login_button"),
-        "signup_link": (AppiumBy.ID, "com.gamegolf.app:id/TODO_signup_link"),
+        # VERIFIED 2026-10-25. Logged out, the app opens on an entry screen
+        # with two buttons: "Sign In" (opens the Log In form) and "Sign Up
+        # With Email" (opens the sign-up form; see SIGNUP).
+        "sign_in_entry_button": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().text("Sign In")',
+        ),
+        "signup_entry_button": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().text("Sign Up With Email")',
+        ),
+        # VERIFIED: Log In form fields are EditTexts holding their label
+        # ("Email Address" / "Password") as a child TextView.
+        "email_field": (
+            AppiumBy.XPATH,
+            '//android.widget.EditText[.//android.widget.TextView[@text="Email Address"]]',
+        ),
+        "password_field": (
+            AppiumBy.XPATH,
+            '//android.widget.EditText[.//android.widget.TextView[@text="Password"]]',
+        ),
+        # VERIFIED: the clickable container around the "Log In" button label
+        # (the screen title also reads "Log In", but isn't clickable). It is
+        # disabled (enabled="false") until both fields have text.
+        "login_button": (
+            AppiumBy.XPATH,
+            '//android.view.View[@clickable="true"][./android.widget.TextView[@text="Log In"]]',
+        ),
+        # VERIFIED: "Login Unsuccessful" dialog shown for wrong credentials,
+        # with the message "Please check your credentials and try again" and a
+        # "Try again" button that closes it.
+        "error_message": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().textContains("check your credentials")',
+        ),
+        "error_title": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().text("Login Unsuccessful")',
+        ),
+        "error_dismiss_button": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().text("Try again")',
+        ),
+        # VERIFIED: back arrow at the top left of the Log In and sign-up forms
+        # (the first clickable element); leads to the entry screen.
+        "back_button": (
+            AppiumBy.XPATH,
+            '(//android.view.View[@clickable="true"])[1]',
+        ),
+        # Same as SIGNUP's form_title; used to tell the sign-up form apart
+        # from the Log In form (both have an "Email Address" field).
+        "signup_form_title": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().textContains("create your")',
+        ),
+        # VERIFIED: signing out is My Profile tab -> "Sign Out" -> "Sign Out!
+        # Are you sure?" dialog -> "Confirm". It ends on the Log In form.
+        "profile_tab": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().text("My Profile")',
+        ),
+        "sign_out_button": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().text("Sign Out")',
+        ),
+        "sign_out_confirm_button": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().text("Confirm")',
+        ),
         # VERIFIED: "My Golf Bag" appears on the post-login home dashboard
         # (org.gameyourgame.kzn.presentation.main.MainActivity).
         "logged_in_indicator": (
@@ -65,7 +127,6 @@ LOGIN = {
             AppiumBy.ANDROID_UIAUTOMATOR,
             'new UiSelector().text("Play Golf")',
         ),
-        "error_message": (AppiumBy.ID, "com.gamegolf.app:id/TODO_login_error_message"),
     },
     "ios": {
         "email_field": (AppiumBy.ACCESSIBILITY_ID, "TODO_email_field"),
@@ -82,15 +143,78 @@ LOGIN = {
 # ---------------------------------------------------------------------------
 SIGNUP = {
     "android": {
-        "first_name_field": (AppiumBy.ID, "com.gamegolf.app:id/TODO_first_name_field"),
-        "last_name_field": (AppiumBy.ID, "com.gamegolf.app:id/TODO_last_name_field"),
-        "email_field": (AppiumBy.ID, "com.gamegolf.app:id/TODO_signup_email_field"),
-        "password_field": (AppiumBy.ID, "com.gamegolf.app:id/TODO_signup_password_field"),
-        "confirm_password_field": (AppiumBy.ID, "com.gamegolf.app:id/TODO_confirm_password_field"),
-        "signup_button": (AppiumBy.ID, "com.gamegolf.app:id/TODO_signup_button"),
-        "login_link": (AppiumBy.ID, "com.gamegolf.app:id/TODO_signup_login_link"),
-        "signup_success_indicator": (AppiumBy.ID, "com.gamegolf.app:id/TODO_home_screen_root"),
-        "error_message": (AppiumBy.ID, "com.gamegolf.app:id/TODO_signup_error_message"),
+        # VERIFIED 2026-10-25: "Let's create your new account!" form, reached
+        # from the entry screen's "Sign Up With Email". Fields are EditTexts
+        # holding their label as a child TextView. There is no confirm-
+        # password field.
+        "form_title": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().textContains("create your")',
+        ),
+        "first_name_field": (
+            AppiumBy.XPATH,
+            '//android.widget.EditText[.//android.widget.TextView[@text="First Name"]]',
+        ),
+        "last_name_field": (
+            AppiumBy.XPATH,
+            '//android.widget.EditText[.//android.widget.TextView[@text="Last Name"]]',
+        ),
+        "email_field": (
+            AppiumBy.XPATH,
+            '//android.widget.EditText[.//android.widget.TextView[@text="Email Address"]]',
+        ),
+        "password_field": (
+            AppiumBy.XPATH,
+            '//android.widget.EditText[.//android.widget.TextView[@text="Password"]]',
+        ),
+        # VERIFIED: the checkbox is an unlabelled clickable View next to the
+        # "I agree to GameGolf's Terms & Conditions" text (its following
+        # sibling).
+        "terms_checkbox": (
+            AppiumBy.XPATH,
+            '//android.widget.TextView[contains(@text, "Terms & Conditions")]'
+            '/following-sibling::android.view.View[@clickable="true"][1]',
+        ),
+        # VERIFIED: clickable container around the "Continue" label; disabled
+        # until every field is filled and the terms are accepted.
+        "signup_button": (
+            AppiumBy.XPATH,
+            '//android.view.View[@clickable="true"][./android.widget.TextView[@text="Continue"]]',
+        ),
+        # VERIFIED: an already registered email shows a "Registration
+        # Unsuccessful" dialog with the message "Email already exists" and a
+        # "Try again" button.
+        "error_message": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().textContains("already exists")',
+        ),
+        "error_title": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().text("Registration Unsuccessful")',
+        ),
+        # VERIFIED: after a successful sign-up the new account lands on the
+        # onboarding screen ("Set up your device ... Swipe to Continue").
+        "onboarding_screen": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().textContains("Set up your device")',
+        ),
+        # VERIFIED: swiping up on the onboarding screen shows a 3-step set-up
+        # guide (Charge GPS Tracker / Screw in Smart Sensors / Connect One by
+        # One) with two buttons: "Start Setup" (the "I have a device" path,
+        # leading to the golf bag screen with SKIP) and "Don't have a Device"
+        # (written with a curly apostrophe, hence "don.t").
+        "have_device_button": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().text("Start Setup")',
+        ),
+        "dont_have_device_button": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().textMatches("(?i)don.t have a device")',
+        ),
+        "skip_button": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().textMatches("(?i) *skip *")',
+        ),
     },
     "ios": {
         "first_name_field": (AppiumBy.ACCESSIBILITY_ID, "TODO_first_name_field"),
@@ -295,8 +419,27 @@ ROUND_ACTIVE = {
             AppiumBy.ANDROID_UIAUTOMATOR,
             'new UiSelector().textContains("Smart Caddie")',
         ),
+        # VERIFIED: once Smart Caddie has loaded, its recommendation panel
+        # shows "Plays Like NNN Mtr / Actual NNN Mtr / Club 2W" (plus a
+        # strategy selector, e.g. "Optimal"). If it was calculated recently
+        # it can show straight away, without the loader.
+        "smart_caddie_loaded": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().textContains("Plays Like")',
+        ),
         # The Smart Caddie loader (bottom left) shows its progress as
         # "Loading NN%"; matches any text with a percentage in it.
+        # VERIFIED: dialog shown on Home when a round was left open
+        # ("Unfinished Round - It seems there is an unfinished round. Would
+        # you like to continue?" / "Continue Round" / "Create New Round").
+        "unfinished_round_dialog": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().textContains("unfinished round")',
+        ),
+        "continue_round_button": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().text("Continue Round")',
+        ),
         # VERIFIED: error dialog the app sometimes shows when ending a round
         # ("Ops! An unexpected error occurred. Please certify that your device
         # is connected with internet and try again." / Cancel / Confirm).

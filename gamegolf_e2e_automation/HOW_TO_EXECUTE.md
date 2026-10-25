@@ -70,9 +70,17 @@ scenario needs no code changes.
    skips it. `course` must match the Courses sheet and be findable in the
    app's course search.
 
-   | scenario_id | description | course | run |
-   |---|---|---|---|
-   | TC_PG_001 | Holes 1-3: Driver, 8 Iron, Putter | Gort Golf Club | Yes |
+   | scenario_id | description | course | run | delay_seconds |
+   |---|---|---|---|---|
+   | TC_PG_001 | Holes 1-3: Driver, 8 Iron, Putter | Gort Golf Club | Yes | |
+   | TC_PG_003 | Stray shots | Gort Golf Club | Yes | 3 |
+
+   `delay_seconds` sets how the Medallion moves:
+   - **Blank:** it walks between locations in small GPS steps, like a player.
+   - **Set (minimum 3):** it jumps straight to each shot's location, and waits
+     that many seconds after every command. Test cases written as Medallion
+     command lists (`nmea fake_coordinates ...` / `storage_service_v2 shot_add
+     ...`) are converted into Shots rows played this way.
 
 3. **Shots**: one row per shot. The Medallion moves to the location, then
    swings the club (picked from the Clubs sheet).
