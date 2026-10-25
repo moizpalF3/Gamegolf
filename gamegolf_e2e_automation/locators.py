@@ -419,16 +419,23 @@ ROUND_ACTIVE = {
             AppiumBy.ANDROID_UIAUTOMATOR,
             'new UiSelector().textContains("Smart Caddie")',
         ),
-        # VERIFIED: once Smart Caddie has loaded, its recommendation panel
-        # shows "Plays Like NNN Mtr / Actual NNN Mtr / Club 2W" (plus a
-        # strategy selector, e.g. "Optimal"). If it was calculated recently
-        # it can show straight away, without the loader.
+        # VERIFIED: once Smart Caddie has loaded, the map shows its
+        # recommendation ("Plays Like NNN Mtr / Actual NNN Mtr / Club 2W") and
+        # the bottom-left loader is replaced by a strategy selector reading
+        # "Optimal". The recommendation is drawn on the map and isn't in the
+        # element tree, so the strategy selector is what's checked. If Smart
+        # Caddie was calculated recently it can show straight away, without
+        # the loader.
         "smart_caddie_loaded": (
             AppiumBy.ANDROID_UIAUTOMATOR,
-            'new UiSelector().textContains("Plays Like")',
+            'new UiSelector().text("Optimal")',
         ),
         # The Smart Caddie loader (bottom left) shows its progress as
         # "Loading NN%"; matches any text with a percentage in it.
+        # VERIFIED: the arrows either side of "Hole: N Score: N" in the bottom
+        # bar (content-desc "Previous Hole" / "Next Hole").
+        "previous_hole_button": (AppiumBy.ACCESSIBILITY_ID, "Previous Hole"),
+        "next_hole_button": (AppiumBy.ACCESSIBILITY_ID, "Next Hole"),
         # VERIFIED: dialog shown on Home when a round was left open
         # ("Unfinished Round - It seems there is an unfinished round. Would
         # you like to continue?" / "Continue Round" / "Create New Round").

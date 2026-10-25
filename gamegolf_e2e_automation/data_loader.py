@@ -18,11 +18,29 @@ Play Golf scenarios (read by load_play_golf_scenarios):
                location and every command is followed by that pause (at
                least 3s) - the way command-script test cases are written.
                Left blank, it walks between locations instead.
+               Optional hold_seconds: after each hole's score matches, keep
+               reporting the hole's last position for that long and check
+               the hole/score again (e.g. no automatic hole switch).
+               Optional start_hole: the player stands on that hole's Tee
+               when the round starts (default: the first shot's location).
+               Optional background = Yes: the app is sent to the background
+               (Home, not closed) before the shots and brought back after
+               them; the checks then run once the app is back.
   Shots        columns: scenario_id | hole | shot | location | club
+                        [| expect_hole | expect_score | expect_text | action]
                The shots to play: move the Medallion to `location` on
                `hole`, then swing `club`. Leave club blank to walk through a
                location without a shot. Holes are played in the order they
-               first appear; shots within a hole in `shot` order.
+               first appear; shots within a hole in `shot` order. Optional
+               expect_hole / expect_score on a row: after that step the app
+               must show this hole and score (checked within 60s); when set
+               on a hole's last row it replaces the usual end-of-hole check
+               (that hole, score = its number of shots). Optional
+               expect_text: after that step, text containing it must show on
+               screen within 60s (e.g. a pop-up); also replaces the usual
+               check when on a hole's last row. Optional action, done in the
+               app after moving to the location and before the shot:
+               previous_hole / next_hole (the bottom bar's arrows).
 """
 
 from pathlib import Path
@@ -150,6 +168,13 @@ def load_play_golf_scenarios(path):
                 wp = {"hole": hole, "label": location, "lat": coords[0], "lon": coords[1]}
                 if s.get("club"):
                     wp["club"] = s["club"]
+                if s.get("action"):
+                    wp["action"] = s["action"].strip().lower()
+                if s.get("expect_text"):
+                    wp["expect_text"] = s["expect_text"]
+                if s.get("expect_hole"):
+                    wp["expect"] = (int(_number(s["expect_hole"], f"Shots ({scenario_id}): expect_hole")),
+                                    int(_number(s.get("expect_score") or "0", f"Shots ({scenario_id}): expect_score")))
                 waypoints.append(wp)
 
         holes_config = {
@@ -159,6 +184,16 @@ def load_play_golf_scenarios(path):
         if r.get("delay_seconds"):
             delay = _number(r["delay_seconds"], f"Scenarios ({scenario_id}): delay_seconds")
             holes_config["command_delay_seconds"] = max(MIN_COMMAND_DELAY_SECONDS, delay)
+        if r.get("hold_seconds"):
+            holes_config["hold_seconds"] = _number(r["hold_seconds"], f"Scenarios ({scenario_id}): hold_seconds")
+        if r.get("start_hole"):
+            start_hole = int(_number(r["start_hole"], f"Scenarios ({scenario_id}): start_hole"))
+            tee = locations.get((course.lower(), start_hole, "tee"))
+            if tee is None:
+                raise ValueError(f"Scenario {scenario_id}: no Tee for hole {start_hole} of '{course}' in Courses")
+            holes_config["start"] = {"label": f"Hole {start_hole} Tee", "lat": tee[0], "lon": tee[1]}
+        if r.get("background", "").lower() in ("yes", "y", "true", "1"):
+            holes_config["background"] = True
 
         scenarios.append({
             "id": scenario_id,
