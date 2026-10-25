@@ -36,18 +36,62 @@ Run these from the `gamegolf_e2e_automation` folder.
    ```
    copy test_config.example.json test_config.json
    ```
-4. Create your test data workbook and fill it in:
-   ```
-   copy test_data.example.xlsx test_data.xlsx
-   ```
+4. Put the test data workbook `test_data.xlsx` next to `conftest.py` (get
+   the team's copy; it isn't in git because it holds passwords). It has
+   these sheets, each with a header row:
+
    | Sheet | What to enter |
    |---|---|
    | Credentials | `valid` and `invalid` login rows (email, password) |
    | Signup | Data used by the sign-up tests |
    | Clubs | Each club name and its tag ID (e.g. `Driver` / `0xD5B7817D`) |
+   | Courses | Coordinates of every named spot on every hole (see below) |
+   | Scenarios | One row per Play Golf test case, switched on or off |
+   | Shots | Which shots each scenario plays, hole by hole |
 
    `test_config.json` and `test_data.xlsx` hold your device details and
    passwords, so they are never committed to git.
+
+### Play Golf scenarios in Excel
+
+Play Golf test cases are defined entirely in `test_data.xlsx`, so a new
+scenario needs no code changes.
+
+1. **Courses**: add coordinates once per course. One row per named spot:
+
+   | course | hole | location | lat | lon |
+   |---|---|---|---|---|
+   | Gort Golf Club | 1 | Tee | 53.061822 | -8.871142 |
+   | Gort Golf Club | 1 | Fairway | 53.060388 | -8.868292 |
+   | Gort Golf Club | 1 | Green | 53.060799 | -8.867366 |
+
+   Use any location names you like (`Bunker`, `Fairway - missed left`, ...).
+2. **Scenarios**: one row per test case. `run` = `Yes` includes it, `No`
+   skips it. `course` must match the Courses sheet and be findable in the
+   app's course search.
+
+   | scenario_id | description | course | run |
+   |---|---|---|---|
+   | TC_PG_001 | Holes 1-3: Driver, 8 Iron, Putter | Gort Golf Club | Yes |
+
+3. **Shots**: one row per shot. The Medallion moves to the location, then
+   swings the club (picked from the Clubs sheet).
+
+   | scenario_id | hole | shot | location | club |
+   |---|---|---|---|---|
+   | TC_PG_001 | 1 | 1 | Tee | Driver |
+   | TC_PG_001 | 1 | 2 | Fairway | 8 Iron |
+   | TC_PG_001 | 1 | 3 | Green | Putter |
+
+   - Holes are played in the order they first appear, shots by `shot` number.
+   - The same location can be used twice (e.g. two putts from the Green).
+   - Leave `club` blank to walk through a location without a shot.
+   - The expected score for each hole is its number of shots with a club.
+
+Each enabled scenario shows up as its own test in the report, e.g.
+`test_play_full_round[TC_PG_001]`, and can be run on its own with
+`-- -k TC_PG_001`. Mistakes such as an unknown location or club are reported
+by name before anything runs on the phone.
 
 ## 3. Running tests
 

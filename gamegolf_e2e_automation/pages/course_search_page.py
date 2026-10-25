@@ -20,14 +20,19 @@ class CourseSearchPage(BasePage):
         self.click_templated("result_row_template", timeout=20, course_name=course_name)
         print(f"[CourseSearch] Selected course '{course_name}'")
 
-    def start_round(self):
+    def start_round(self, max_scrolls=4):
         print("[CourseSearch] Scrolling to Start Round")
         # Start Round sits below the fold in a lazily-composed list; Compose
-        # doesn't render off-screen items, so scroll it into view first.
-        self.driver.execute_script("mobile: scrollGesture", {
-            "left": 100, "top": 500, "width": 800, "height": 1500,
-            "direction": "down", "percent": 3.0,
-        })
+        # doesn't render off-screen items, so scroll it into view first. Home
+        # re-renders after a course is picked, which can undo a single early
+        # scroll, so keep scrolling until the button is actually there.
+        for _ in range(max_scrolls):
+            if self.is_visible("start_round_button", timeout=3):
+                break
+            self.driver.execute_script("mobile: scrollGesture", {
+                "left": 100, "top": 500, "width": 800, "height": 1500,
+                "direction": "down", "percent": 3.0,
+            })
         print("[CourseSearch] Tapping Start Round")
         self.click("start_round_button")
         self.click("start_round_confirm_button")

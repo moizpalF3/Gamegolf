@@ -21,11 +21,26 @@ class LoginPage(BasePage):
         print("[Login] Logged in successfully")
 
     def ensure_logged_in(self, email, password):
-        """Skips the login form when the app is already on the logged-in home screen."""
-        if self.is_visible("logged_in_indicator", timeout=8):
+        """
+        Skips the login form when the app is already logged in (on Home or on
+        another tab), and leaves the app on the Home dashboard either way.
+        """
+        if self.is_visible("logged_in_indicator", timeout=8) or self.is_visible("home_tab", timeout=2):
             print("[Login] Already logged in - skipping login form")
-            return
-        self.login(email, password)
+        else:
+            self.login(email, password)
+        self.go_home()
+
+    def go_home(self):
+        """
+        Switches to the Home dashboard via the bottom tab unless it's already
+        showing, then scrolls it to the top (where the GPS Tracker widget is).
+        """
+        if not self.is_visible("logged_in_indicator", timeout=2):
+            print("[Login] Switching to the Home tab")
+            self.click("home_tab")
+            self.find("logged_in_indicator")
+        self.scroll_to_top()
 
     def go_to_signup(self):
         self.click("signup_link")

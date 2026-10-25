@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,22 @@ from pages.round_page import RoundPage
 pytestmark = [pytest.mark.smoke, pytest.mark.regression, pytest.mark.play_golf]
 
 
+def _connect_with_retry(cli, attempts=5, wait_seconds=3):
+    """Opens the Medallion's serial port, retrying while another program briefly holds it."""
+    for attempt in range(1, attempts + 1):
+        try:
+            cli.connect()
+            return
+        except Exception as e:
+            if attempt == attempts:
+                raise RuntimeError(
+                    f"Couldn't open the Medallion's port {cli.port} after {attempts} tries: {e}. "
+                    f"Close any serial monitor (PuTTY, Arduino IDE, another test run) using it."
+                ) from e
+            print(f"[Medallion] {cli.port} busy ({e}); retrying in {wait_seconds}s")
+            time.sleep(wait_seconds)
+
+
 @pytest.mark.live_hardware
 class TestPlayGolfLiveScenario:
     """
@@ -27,34 +44,30 @@ class TestPlayGolfLiveScenario:
     exercise the flow without a real serial connection.
     """
 
-    def test_play_full_round(self, driver, platform, config, screenshot):
-        """TC_PG_001 - Play Gort holes 1-3 live; each hole's score must equal the shots played."""
+    def test_play_full_round(self, driver, platform, config, screenshot, scenario):
+        """TC_PG_001 - Play a scenario's holes live; each hole's score must equal the shots played."""
+        # `scenario` is one row of the Scenarios sheet (see conftest), or None
+        # to play play_golf.holes_config_file from test_config.json.
         creds = config["login"]["valid_credentials"]
         golf = config["play_golf"]
+        course_name = scenario["course"] if scenario else golf["course_name"]
 
-        LoginPage(driver, platform).ensure_logged_in(creds["email"], creds["password"])
-        ConnectDevicePage(driver, platform).connect()
-
-        search_page = CourseSearchPage(driver, platform)
-        search_page.search_and_select_course(golf["course_name"])
-        search_page.start_round()
-
-        golf_bag_page = GolfBagPage(driver, platform)
-        golf_bag_page.pair_all_clubs(golf["clubs"])
-        golf_bag_page.continue_to_round()
-
-        round_page = RoundPage(driver, platform)
-        round_page.wait_for_round_started()
-        round_page.wait_for_smart_caddie()
-
-        holes_config = medallion.load_config(Path(golf["holes_config_file"]))
+        # Build the Medallion plan first, so a bad club name fails before a
+        # round is started on the phone.
+        if scenario:
+            holes_config = scenario["holes_config"]
+        else:
+            holes_config = medallion.load_config(Path(golf["holes_config_file"]))
         if golf.get("medallion_port"):
             holes_config["port"] = golf["medallion_port"]
 
         apply_club_tags(holes_config["waypoints"], golf["clubs"])
 
         holes_dict = medallion.group_waypoints_into_holes(holes_config)
-        hole_order = medallion.resolve_hole_order(holes_dict, golf.get("holes"))
+        # A scenario plays its holes in the order they appear in the Shots sheet.
+        hole_order = medallion.resolve_hole_order(
+            holes_dict, list(holes_dict) if scenario else golf.get("holes")
+        )
 
         steps = holes_config.get("steps_between_points", medallion.DEFAULT_STEPS_BETWEEN_POINTS)
         seconds_between_steps = holes_config.get(
@@ -63,9 +76,40 @@ class TestPlayGolfLiveScenario:
         shot_settle = holes_config.get("shot_settle_seconds", medallion.DEFAULT_SHOT_SETTLE_SECONDS)
 
         cli = medallion.GameGolfCLI(port=holes_config["port"], dry_run=config.get("dry_run", False))
-        cli.connect()
+        _connect_with_retry(cli)
+
+        # Stand the player on the first shot's spot (normally the first tee)
+        # before the round starts: Smart Caddie only loads for the player's
+        # current position, and the Medallion otherwise still reports wherever
+        # the previous run finished.
+        start = holes_dict[hole_order[0]][0]
+        stand_at_start = lambda: medallion.move_to(cli, start["lat"], start["lon"])
+        stand_at_start()
+
+        round_page = RoundPage(driver, platform)
+        round_page.end_round_if_active()
+        round_started = False
         score_mismatches = []
         try:
+            LoginPage(driver, platform).ensure_logged_in(creds["email"], creds["password"])
+            ConnectDevicePage(driver, platform).connect()
+
+            search_page = CourseSearchPage(driver, platform)
+            search_page.search_and_select_course(course_name)
+            search_page.start_round()
+            round_started = True
+
+            golf_bag_page = GolfBagPage(driver, platform)
+            golf_bag_page.pair_all_clubs(golf["clubs"])
+            golf_bag_page.continue_to_round()
+            round_page.wait_for_round_started()
+
+            # Don't play any shots until Smart Caddie's loader reaches 100%.
+            # It only progresses while GPS fixes keep arriving, so keep
+            # reporting the start position while waiting.
+            round_page.wait_for_smart_caddie(keep_alive=stand_at_start)
+            screenshot("smart_caddie_loaded")
+
             for hole_num in hole_order:
                 waypoints = holes_dict[hole_num]
                 label = medallion.hole_label_for(holes_config, hole_num)
@@ -85,6 +129,15 @@ class TestPlayGolfLiveScenario:
                         f"hole {hole_num}: expected score {expected_shots}, app showed "
                         f"hole {actual_hole} / score {actual_score} (screenshot: {shot})"
                     )
+        except Exception:
+            # Don't leave a live round open on the account when play breaks
+            # off part way (e.g. Smart Caddie never finishes loading).
+            if round_started:
+                try:
+                    round_page.end_round()
+                except Exception as e:
+                    print(f"[Cleanup] Could not end the round: {e}")
+            raise
         finally:
             cli.disconnect()
 

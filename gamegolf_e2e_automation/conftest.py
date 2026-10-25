@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from appium_driver_factory import build_driver
-from data_loader import load_overrides, merge_config
+from data_loader import load_overrides, load_play_golf_scenarios, merge_config
 import device_utils
 
 PROJECT_DIR = Path(__file__).parent
@@ -115,6 +115,22 @@ def _attach_connected_device(cfg, requested_serial):
     print(f"\n[Device] Using {device_utils.device_model(serial) or 'device'} ({serial}), Android {version}")
 
 
+def pytest_generate_tests(metafunc):
+    """
+    One test case per enabled row of the Scenarios sheet in the test data
+    workbook, so `-k TC_PG_002` runs a single scenario. Without a Scenarios
+    sheet, falls back to a single run from play_golf.holes_config_file.
+    """
+    if "scenario" not in metafunc.fixturenames:
+        return
+    data_path = Path(metafunc.config.getoption("--test-data"))
+    scenarios = load_play_golf_scenarios(data_path) if data_path.exists() else []
+    if scenarios:
+        metafunc.parametrize("scenario", scenarios, ids=[s["id"] for s in scenarios])
+    else:
+        metafunc.parametrize("scenario", [None], ids=["TC_PG_001"])
+
+
 @pytest.fixture(scope="session")
 def platform(config):
     return config["platform"].lower()
@@ -156,7 +172,11 @@ def screenshot(request, driver):
 def pytest_runtest_makereport(item, call):
     outcome = yield
     report = outcome.get_result()
-    report.description = (item.function.__doc__ or "").strip().split("\n")[0]
+    scenario = getattr(item, "callspec", None) and item.callspec.params.get("scenario")
+    if scenario:
+        report.description = f"{scenario['id']} - {scenario['description']} ({scenario['course']})"
+    else:
+        report.description = (item.function.__doc__ or "").strip().split("\n")[0]
 
     if report.when != "call":
         return

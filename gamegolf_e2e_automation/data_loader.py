@@ -7,6 +7,18 @@ Sheets (all optional; header row is row 1, extra rows/blank rows are ignored):
                                                       email_domain, password,
                                                       existing_email)
   Clubs        columns: club_name | tag_id
+
+Play Golf scenarios (read by load_play_golf_scenarios):
+  Courses      columns: course | hole | location | lat | lon
+               The coordinate library: every named spot on every hole
+               (Tee, Fairway, Fairway - missed left, Green, ...).
+  Scenarios    columns: scenario_id | description | course | run
+               One row per Play Golf test case; run = Yes / No.
+  Shots        columns: scenario_id | hole | shot | location | club
+               The shots to play: move the Medallion to `location` on
+               `hole`, then swing `club`. Leave club blank to walk through a
+               location without a shot. Holes are played in the order they
+               first appear; shots within a hole in `shot` order.
 """
 
 from pathlib import Path
@@ -59,6 +71,92 @@ def load_overrides(path):
 
     wb.close()
     return overrides
+
+
+def _number(value, what):
+    try:
+        return float(value)
+    except ValueError:
+        raise ValueError(f"{what}: '{value}' isn't a number") from None
+
+
+def load_play_golf_scenarios(path):
+    """
+    Builds one Play Golf scenario per enabled row of the Scenarios sheet:
+      {"id", "description", "course", "holes_config": {"waypoints", "holes_info"}}
+    where holes_config is in the same shape as a waypoints JSON file, so the
+    Medallion simulator can play it as is. Returns [] if the workbook has no
+    Scenarios sheet.
+    """
+    wb = load_workbook(Path(path), data_only=True, read_only=True)
+    sheets = {name.strip().lower(): wb[name] for name in wb.sheetnames}
+    if "scenarios" not in sheets:
+        wb.close()
+        return []
+    for required in ("courses", "shots"):
+        if required not in sheets:
+            wb.close()
+            raise ValueError(f"{path}: has a Scenarios sheet but no '{required.title()}' sheet")
+
+    locations = {}
+    for r in _rows(sheets["courses"]):
+        key = (r.get("course", "").lower(), int(_number(r.get("hole", ""), "Courses: hole")),
+               r.get("location", "").lower())
+        locations[key] = (_number(r.get("lat", ""), f"Courses: lat for {key}"),
+                          _number(r.get("lon", ""), f"Courses: lon for {key}"))
+
+    shots_by_scenario = {}
+    for r in _rows(sheets["shots"]):
+        shots_by_scenario.setdefault(r.get("scenario_id", ""), []).append(r)
+
+    scenarios = []
+    for r in _rows(sheets["scenarios"]):
+        scenario_id = r.get("scenario_id", "")
+        if not scenario_id or r.get("run", "yes").lower() not in ("yes", "y", "true", "1"):
+            continue
+        course = r.get("course", "")
+        rows = shots_by_scenario.get(scenario_id)
+        if not rows:
+            raise ValueError(f"Scenario {scenario_id} has no rows in the Shots sheet")
+
+        # Holes in first-seen order; shots within a hole by their shot number.
+        hole_order = []
+        for s in rows:
+            hole = int(_number(s.get("hole", ""), f"Shots ({scenario_id}): hole"))
+            s["_hole"] = hole
+            if hole not in hole_order:
+                hole_order.append(hole)
+
+        waypoints = []
+        for hole in hole_order:
+            hole_rows = [s for s in rows if s["_hole"] == hole]
+            hole_rows.sort(key=lambda s: _number(s.get("shot") or "0", f"Shots ({scenario_id}): shot"))
+            for s in hole_rows:
+                location = s.get("location", "")
+                coords = locations.get((course.lower(), hole, location.lower()))
+                if coords is None:
+                    known = sorted(loc for (c, h, loc) in locations if c == course.lower() and h == hole)
+                    raise ValueError(
+                        f"Scenario {scenario_id}: location '{location}' on hole {hole} of "
+                        f"'{course}' isn't in the Courses sheet. Known locations: {known or 'none'}"
+                    )
+                wp = {"hole": hole, "label": location, "lat": coords[0], "lon": coords[1]}
+                if s.get("club"):
+                    wp["club"] = s["club"]
+                waypoints.append(wp)
+
+        scenarios.append({
+            "id": scenario_id,
+            "description": r.get("description", ""),
+            "course": course,
+            "holes_config": {
+                "waypoints": waypoints,
+                "holes_info": {str(h): {"course": course, "name": f"Hole {h}"} for h in hole_order},
+            },
+        })
+
+    wb.close()
+    return scenarios
 
 
 def merge_config(config, overrides):

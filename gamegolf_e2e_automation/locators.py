@@ -58,6 +58,13 @@ LOGIN = {
             AppiumBy.ANDROID_UIAUTOMATOR,
             'new UiSelector().textContains("My Golf Bag")',
         ),
+        # VERIFIED: bottom navigation tab that opens the Home dashboard. The
+        # app reopens on whichever tab was last used (e.g. My Rounds after a
+        # round is ended), so tests tap this to get back to Home.
+        "home_tab": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().text("Play Golf")',
+        ),
         "error_message": (AppiumBy.ID, "com.gamegolf.app:id/TODO_login_error_message"),
     },
     "ios": {
@@ -162,10 +169,13 @@ COURSE_SEARCH = {
         # content-desc — so this could match other EditTexts if the screen
         # changes; scope it further if that becomes a problem).
         "search_field": (AppiumBy.CLASS_NAME, "android.widget.EditText"),
-        # VERIFIED: opens the Search screen from Home.
+        # VERIFIED: opens the Search screen from Home. Uses the box's
+        # "Search Location" label, which is always shown; the placeholder
+        # "Choose your golf course" is replaced by the course name once one
+        # has been selected (e.g. by a previous run).
         "search_trigger": (
             AppiumBy.ANDROID_UIAUTOMATOR,
-            'new UiSelector().textContains("Choose your golf course")',
+            'new UiSelector().text("Search Location")',
         ),
         # VERIFIED: matches a course row both in "Nearby Courses" on Home
         # and (presumably) in real search results, by visible text. Limited
@@ -284,6 +294,20 @@ ROUND_ACTIVE = {
         "smart_caddie_recommendation": (
             AppiumBy.ANDROID_UIAUTOMATOR,
             'new UiSelector().textContains("Smart Caddie")',
+        ),
+        # The Smart Caddie loader (bottom left) shows its progress as
+        # "Loading NN%"; matches any text with a percentage in it.
+        # VERIFIED: error dialog the app sometimes shows when ending a round
+        # ("Ops! An unexpected error occurred. Please certify that your device
+        # is connected with internet and try again." / Cancel / Confirm).
+        # Its "Confirm" retries; end_round_confirm_button matches that too.
+        "end_round_error": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().textContains("unexpected error occurred")',
+        ),
+        "smart_caddie_progress": (
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().textMatches(".*[0-9]+ ?%.*")',
         ),
         # VERIFIED (from a saved page dump): the bottom bar renders "Hole:",
         # its number, "Score:" and its number as four separate sibling

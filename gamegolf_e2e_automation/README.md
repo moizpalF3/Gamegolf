@@ -112,9 +112,10 @@ test_config.example.json   Sample config for the pytest suite - copy to test_con
 ## Test data in Excel (credentials + club tag IDs)
 
 `test_data.xlsx` (next to `conftest.py`) overrides the matching values in
-`test_config.json`, so day-to-day changes don't need JSON edits. Copy
-`test_data.example.xlsx` to `test_data.xlsx` and fill it in. The real file is
-gitignored because it holds passwords.
+`test_config.json`, so day-to-day changes don't need JSON edits. The file is
+gitignored because it holds passwords; get the team's copy. Play Golf
+scenarios (Courses / Scenarios / Shots sheets) are described in
+[HOW_TO_EXECUTE.md](HOW_TO_EXECUTE.md).
 
 - **Credentials** sheet: `type` (valid/invalid), `email`, `password`
 - **Signup** sheet: `setting`/`value` rows (first_name, last_name, email_domain, password, existing_email)

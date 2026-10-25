@@ -67,6 +67,24 @@ class BasePage:
             EC.presence_of_element_located((by, value))
         )
 
+    def scroll_to_top(self, max_scrolls=5):
+        """
+        Scrolls the current screen's list back to the top. The app keeps a
+        screen's scroll position between launches, and Compose lists don't
+        render off-screen items, so elements above the fold can't be found.
+        """
+        size = self.driver.get_window_size()
+        area = {
+            "left": int(size["width"] * 0.1), "top": int(size["height"] * 0.2),
+            "width": int(size["width"] * 0.8), "height": int(size["height"] * 0.6),
+        }
+        for _ in range(max_scrolls):
+            # scrollGesture returns False once there's nothing left to scroll.
+            if not self.driver.execute_script(
+                "mobile: scrollGesture", {**area, "direction": "up", "percent": 3.0}
+            ):
+                break
+
     def tap_relative(self, x_pct, y_pct):
         """
         Taps a point given as a fraction (0.0-1.0) of screen width/height,
