@@ -20,7 +20,7 @@ report with a pass/fail result and screenshots for each test case.
 
 ## 2. One-time setup
 
-Run these from the `gamegolf_e2e_automation` folder.
+Run these from the repository root (the folder with `run_tests.py`).
 
 1. Install the Python packages:
    ```
@@ -31,14 +31,15 @@ Run these from the `gamegolf_e2e_automation` folder.
    npm install -g appium
    appium driver install uiautomator2
    ```
-3. Create your config from the template, then set the app package/activity
-   and the Medallion `medallion_port` (the phone is detected automatically):
+3. Create your config from the template, then set the Medallion
+   `medallion_port` (an Android phone is detected automatically; for iOS fill
+   in the `appium.ios` block):
    ```
-   copy test_config.example.json test_config.json
+   copy config\test_config.example.json config\test_config.json
    ```
-4. Put the test data workbook `test_data.xlsx` next to `conftest.py` (get
-   the team's copy; it isn't in git because it holds passwords). It has
-   these sheets, each with a header row:
+4. Put the test data workbook in `test_data\test_data.xlsx` (get the team's
+   copy; it isn't in git because it holds passwords). It has these sheets,
+   each with a header row:
 
    | Sheet | What to enter |
    |---|---|
@@ -49,8 +50,8 @@ Run these from the `gamegolf_e2e_automation` folder.
    | Scenarios | One row per Play Golf test case, switched on or off |
    | Shots | Which shots each scenario plays, hole by hole |
 
-   `test_config.json` and `test_data.xlsx` hold your device details and
-   passwords, so they are never committed to git.
+   `config/test_config.json` and `test_data/test_data.xlsx` hold your device
+   details and passwords, so they are never committed to git.
 
 ### Play Golf scenarios in Excel
 
@@ -159,6 +160,7 @@ Useful options:
 
 | Option | Effect |
 |---|---|
+| `--platform android` / `--platform ios` | Platform to run on (default: `platform` in the config) |
 | `--no-hardware` | Skip tests that need the Medallion |
 | `--device R5CR321EVPX` | Pick a phone when more than one is connected |
 | `--open` | Open the HTML report when the run finishes |
@@ -175,7 +177,7 @@ python run_tests.py --suite play_golf -- -k TC_PG_001
 Each run gets its own folder:
 
 ```
-artifacts/runs/20261022_143005_smoke/
+artifacts/runs/20261022_143005_android_smoke/
   report.html        <- open this in any browser
   screenshots/       <- every screenshot as a PNG
   appium.log         <- only if the runner started Appium itself
@@ -201,6 +203,7 @@ as is.
 | `regression` | Every test case; run before a release |
 | `login` / `signup` / `play_golf` | Feature areas, for focused runs |
 | `live_hardware` | Needs the physical Medallion; excluded by `--no-hardware` |
+| `android` / `ios` | Platform-only tests; skipped automatically on the other platform |
 
 Every test case has an ID (e.g. `TC_PG_001`) shown in its description in the
 report.
@@ -214,15 +217,17 @@ report.
 | `Neither ANDROID_HOME nor ANDROID_SDK_ROOT` | Set `ANDROID_HOME` to your SDK folder (e.g. `%LOCALAPPDATA%\Android\Sdk`) |
 | A test fails with `NoSuchElement` / `Timeout` | The screen didn't show what the test expected; check that test's screenshots in the report |
 | Play Golf: Start Round stays grey | The Medallion isn't connected to the phone; power it on and keep it near the phone |
-| Play Golf: serial port error | Check the Medallion's COM port in Device Manager and update `medallion_port` in `test_config.json` |
+| Play Golf: serial port error | Check the Medallion's COM port in Device Manager and update `medallion_port` in `config/test_config.json` |
 
 ## 7. Running without the runner (advanced)
 
-Start Appium yourself, then call pytest directly from `gamegolf_e2e_automation`:
+Start Appium yourself, then call pytest directly from the repository root:
 ```
 appium --address 127.0.0.1 --port 4723
 pytest -m smoke
 pytest -m "regression and not live_hardware"
 pytest -k TC_LOGIN_001
+pytest tests/play_golf
+pytest --platform ios -m login
 ```
 Reports and screenshots go to `artifacts/runs/<timestamp>/` in the same way.

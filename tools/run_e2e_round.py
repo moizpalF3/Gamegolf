@@ -25,13 +25,13 @@ against a real screen. See locators.py for instructions on finding them.
 
 Requirements:
     pip install -r requirements.txt
-    An Appium server running (see appium_driver_factory.py for setup notes)
+    An Appium server running (see framework/core/driver_factory.py for setup notes)
     The Medallion connected via USB serial for the live-play portion
 
 Usage:
-    python3 run_e2e_round.py --config round_config.json
-    python3 run_e2e_round.py --config round_config.json --dry-run
-    python3 run_e2e_round.py --config round_config.json --skip-ui   # only run the medallion/live-play part
+    python tools/run_e2e_round.py --config tools/round_config.json
+    python tools/run_e2e_round.py --config tools/round_config.json --dry-run
+    python tools/run_e2e_round.py --config tools/round_config.json --skip-ui   # only run the medallion/live-play part
 """
 
 import argparse
@@ -40,14 +40,17 @@ import sys
 import time
 from pathlib import Path
 
-from appium_driver_factory import build_driver
-from pages.login_page import LoginPage
-from pages.connect_device_page import ConnectDevicePage
-from pages.course_search_page import CourseSearchPage
-from pages.golf_bag_page import GolfBagPage
-from pages.round_page import RoundPage
+# Run from anywhere: make the repo root (with the framework package) importable.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import gamegolf_hole_simulator as medallion
+from framework.core.driver_factory import build_driver
+from framework.pages.login_page import LoginPage
+from framework.pages.connect_device_page import ConnectDevicePage
+from framework.pages.course_search_page import CourseSearchPage
+from framework.pages.golf_bag_page import GolfBagPage
+from framework.pages.round_page import RoundPage
+
+from framework.hardware import medallion
 
 
 def load_config(path):

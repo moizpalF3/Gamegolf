@@ -6,25 +6,34 @@ from pathlib import Path
 
 import pytest
 
-from appium_driver_factory import build_driver
-from data_loader import load_overrides, load_play_golf_scenarios, merge_config
-import device_utils
+from framework.core.driver_factory import build_driver
+from framework.core.data_loader import load_overrides, load_play_golf_scenarios, merge_config
+from framework.core import device_utils
 
 PROJECT_DIR = Path(__file__).parent
+PLATFORMS = ("android", "ios")
 
 
 def pytest_addoption(parser):
     parser.addoption(
+        "--platform",
+        action="store",
+        choices=PLATFORMS,
+        default=None,
+        help="Platform to run on (default: 'platform' in the test config)",
+    )
+    parser.addoption(
         "--test-config",
         action="store",
-        default="test_config.json",
-        help="Path to the test config JSON (copy test_config.example.json to get started)",
+        default="config/test_config.json",
+        help="Path to the test config JSON (copy config/test_config.example.json to get started)",
     )
     parser.addoption(
         "--test-data",
         action="store",
-        default="test_data.xlsx",
-        help="Excel file with credentials / club tag IDs that override test_config.json (skipped if missing)",
+        default="test_data/test_data.xlsx",
+        help="Excel file with credentials / club tag IDs / scenarios that override the test config "
+             "(skipped if missing)",
     )
     parser.addoption(
         "--device-serial",
@@ -74,22 +83,61 @@ def pytest_html_results_table_row(report, cells):
 # Config + device
 # ---------------------------------------------------------------------------
 
-@pytest.fixture(scope="session")
-def config(pytestconfig):
-    config_path = Path(pytestconfig.getoption("--test-config"))
+def _resolve(path):
+    """A path as given, or relative to the project root if it doesn't exist from here."""
+    path = Path(path)
+    return path if path.is_absolute() or path.exists() else PROJECT_DIR / path
+
+
+def _read_config_file(pytestconfig):
+    config_path = _resolve(pytestconfig.getoption("--test-config"))
     if not config_path.exists():
         pytest.exit(
             f"Test config not found: {config_path}. "
-            f"Copy test_config.example.json to {config_path.name} and fill it in."
+            f"Copy config/test_config.example.json to {config_path.name} and fill it in."
         )
     with open(config_path, "r") as f:
-        cfg = json.load(f)
+        return json.load(f)
 
-    data_path = Path(pytestconfig.getoption("--test-data"))
+
+def _selected_platform(pytestconfig):
+    """--platform if given, else the test config's 'platform'."""
+    if not hasattr(pytestconfig, "_gg_platform"):
+        chosen = pytestconfig.getoption("--platform") or _read_config_file(pytestconfig).get("platform", "android")
+        pytestconfig._gg_platform = chosen.lower()
+    return pytestconfig._gg_platform
+
+
+def pytest_collection_modifyitems(config, items):
+    """Tests marked @pytest.mark.android / @pytest.mark.ios only run on that platform."""
+    platform = _selected_platform(config)
+    for item in items:
+        others = [p for p in PLATFORMS if p != platform and p in item.keywords]
+        if others and platform not in item.keywords:
+            item.add_marker(pytest.mark.skip(reason=f"{others[0]}-only test (running on {platform})"))
+
+
+@pytest.fixture(scope="session")
+def config(pytestconfig):
+    cfg = _read_config_file(pytestconfig)
+    platform = _selected_platform(pytestconfig)
+    cfg["platform"] = platform
+
+    # "appium" can hold one block per platform ({"android": {...}, "ios": {...}})
+    # plus shared keys such as appium_server_url; keep the shared keys and the
+    # block for the platform under test.
+    appium = cfg.get("appium", {})
+    if any(p in appium for p in PLATFORMS):
+        if platform not in appium:
+            pytest.exit(f"No '{platform}' block under 'appium' in the test config")
+        shared = {k: v for k, v in appium.items() if k not in PLATFORMS}
+        cfg["appium"] = {**shared, **appium[platform]}
+
+    data_path = _resolve(pytestconfig.getoption("--test-data"))
     if data_path.exists():
         merge_config(cfg, load_overrides(data_path))
 
-    if cfg["platform"].lower() == "android":
+    if platform == "android":
         _attach_connected_device(cfg, pytestconfig.getoption("--device-serial"))
     return cfg
 
@@ -123,7 +171,7 @@ def pytest_generate_tests(metafunc):
     """
     if "scenario" not in metafunc.fixturenames:
         return
-    data_path = Path(metafunc.config.getoption("--test-data"))
+    data_path = _resolve(metafunc.config.getoption("--test-data"))
     scenarios = load_play_golf_scenarios(data_path) if data_path.exists() else []
     if scenarios:
         metafunc.parametrize("scenario", scenarios, ids=[s["id"] for s in scenarios])
@@ -133,7 +181,7 @@ def pytest_generate_tests(metafunc):
 
 @pytest.fixture(scope="session")
 def platform(config):
-    return config["platform"].lower()
+    return config["platform"]
 
 
 @pytest.fixture

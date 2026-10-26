@@ -1,8 +1,8 @@
 import re
 import time
 
-from pages.base_page import BasePage
-from locators import GOLF_BAG
+from framework.pages.base_page import BasePage
+from framework.locators import GOLF_BAG
 
 
 class GolfBagPage(BasePage):

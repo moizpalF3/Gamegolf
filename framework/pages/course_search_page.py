@@ -1,5 +1,5 @@
-from pages.base_page import BasePage
-from locators import COURSE_SEARCH
+from framework.pages.base_page import BasePage
+from framework.locators import COURSE_SEARCH
 
 
 class CourseSearchPage(BasePage):
