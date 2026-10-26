@@ -46,10 +46,10 @@ Requirements:
     pip install pyserial pandas openpyxl
 
 Usage:
-    python3 gamegolf_hole_simulator.py --config round.json
-    python3 gamegolf_hole_simulator.py --config round.csv --port COM4
-    python3 gamegolf_hole_simulator.py --config round.xlsx --dry-run
-    python3 gamegolf_hole_simulator.py --config round.xlsx --holes 2,6
+    python -m framework.hardware.medallion --config round.json
+    python -m framework.hardware.medallion --config round.csv --port COM4
+    python -m framework.hardware.medallion --config round.xlsx --dry-run
+    python -m framework.hardware.medallion --config round.xlsx --holes 2,6
 """
 
 import argparse
@@ -428,8 +428,8 @@ def main():
     parser.add_argument("--holes", type=parse_holes_arg, default=None,
                          help="Comma-separated hole numbers to run, e.g. --holes 2,6 (default: all holes, ascending)")
     parser.add_argument("--dry-run", action="store_true", help="Print commands without opening the serial port")
-    parser.add_argument("--test-data", default="test_data.xlsx",
-                         help="Excel file whose Clubs sheet maps waypoint 'club' names to tag IDs (default: test_data.xlsx)")
+    parser.add_argument("--test-data", default="test_data/test_data.xlsx",
+                         help="Excel file whose Clubs sheet maps waypoint 'club' names to tag IDs (default: test_data/test_data.xlsx)")
     args = parser.parse_args()
 
     config_path = Path(args.config)
@@ -445,7 +445,7 @@ def main():
 
     try:
         if any("club" in wp and "tag_id" not in wp for wp in config.get("waypoints", [])):
-            from data_loader import apply_club_tags, load_overrides
+            from framework.core.data_loader import apply_club_tags, load_overrides
             clubs = load_overrides(args.test_data).get("play_golf", {}).get("clubs", []) if Path(args.test_data).exists() else []
             apply_club_tags(config["waypoints"], clubs)
         run(config, args)

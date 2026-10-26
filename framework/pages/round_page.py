@@ -1,12 +1,12 @@
-﻿import re
+import re
 import time
 from pathlib import Path
 
 from appium.webdriver.common.appiumby import AppiumBy
 from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
 
-from pages.base_page import BasePage
-from locators import ROUND_ACTIVE
+from framework.pages.base_page import BasePage
+from framework.locators import ROUND_ACTIVE
 
 
 class RoundPage(BasePage):

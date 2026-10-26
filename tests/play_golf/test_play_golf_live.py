@@ -4,16 +4,18 @@ from pathlib import Path
 
 import pytest
 
-import gamegolf_hole_simulator as medallion
-from data_loader import apply_club_tags
-from pages.login_page import LoginPage
-from pages.connect_device_page import ConnectDevicePage
-from pages.course_search_page import CourseSearchPage
-from pages.golf_bag_page import GolfBagPage
-from pages.round_page import RoundPage
+from framework.hardware import medallion
+from framework.core.data_loader import apply_club_tags
+from framework.pages.login_page import LoginPage
+from framework.pages.connect_device_page import ConnectDevicePage
+from framework.pages.course_search_page import CourseSearchPage
+from framework.pages.golf_bag_page import GolfBagPage
+from framework.pages.round_page import RoundPage
 
 
 pytestmark = [pytest.mark.smoke, pytest.mark.regression, pytest.mark.play_golf]
+
+PROJECT_DIR = Path(__file__).resolve().parents[2]
 
 
 def _play_in_background(driver, app_package, cli, holes_config, holes_dict, hole_order, round_page,
@@ -119,7 +121,10 @@ class TestPlayGolfLiveScenario:
         if scenario:
             holes_config = scenario["holes_config"]
         else:
-            holes_config = medallion.load_config(Path(golf["holes_config_file"]))
+            holes_file = Path(golf["holes_config_file"])
+            if not holes_file.is_absolute():
+                holes_file = PROJECT_DIR / holes_file
+            holes_config = medallion.load_config(holes_file)
         if golf.get("medallion_port"):
             holes_config["port"] = golf["medallion_port"]
 

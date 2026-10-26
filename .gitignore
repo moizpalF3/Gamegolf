@@ -1,9 +1,18 @@
+# Python
 __pycache__/
 *.pyc
 .pytest_cache/
+.venv/
 
-round_config.json
-test_config.json
+# IDE
+.idea/
+.vscode/
 
+# Local config and test data (device details and passwords)
+config/test_config.json
+test_data/test_data.xlsx
+test_data/~$*.xlsx
+tools/round_config.json
+
+# Test run output (reports, screenshots, Appium logs)
 artifacts/
-gamegolf_e2e_automation/test_data.xlsx

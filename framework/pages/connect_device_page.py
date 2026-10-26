@@ -1,5 +1,5 @@
-from pages.base_page import BasePage
-from locators import CONNECT_DEVICE
+from framework.pages.base_page import BasePage
+from framework.locators import CONNECT_DEVICE
 
 
 class ConnectDevicePage(BasePage):

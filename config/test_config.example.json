@@ -1,0 +1,54 @@
+{
+  "platform": "android",
+
+  "appium": {
+    "appium_server_url": "http://127.0.0.1:4723",
+    "android": {
+      "device_name": "auto-detected from adb",
+      "platform_version": "auto-detected from adb",
+      "app_package": "org.gameyourgame.kzn.dev",
+      "app_activity": "org.gameyourgame.kzn.presentation.welcome.WelcomeActivity",
+      "no_reset": true
+    },
+    "ios": {
+      "device_name": "TODO_iphone_name",
+      "platform_version": "TODO_ios_version",
+      "udid": "TODO_device_udid",
+      "bundle_id": "TODO_ios_bundle_id",
+      "no_reset": true
+    }
+  },
+
+  "login": {
+    "valid_credentials": {
+      "email": "test.user@example.com",
+      "password": "TODO_test_password"
+    },
+    "invalid_credentials": {
+      "email": "test.user@example.com",
+      "password": "TODO_wrong_password"
+    }
+  },
+
+  "signup": {
+    "first_name": "Test",
+    "last_name": "User",
+    "email_domain": "example.com",
+    "password": "TODO_test_password",
+    "existing_email": "test.user@example.com"
+  },
+
+  "play_golf": {
+    "course_name": "Gort Golf Club",
+    "clubs": [
+      { "name": "Driver", "tag_id": "TODO_tag_id" },
+      { "name": "8 Iron", "tag_id": "TODO_tag_id" },
+      { "name": "Putter", "tag_id": "TODO_tag_id" }
+    ],
+    "medallion_port": "COM4",
+    "holes_config_file": "test_data/waypoints/gort_golf_club_waypoints.json",
+    "holes": [1, 2, 3]
+  },
+
+  "dry_run": false
+}

@@ -1,7 +1,7 @@
-﻿import time
+import time
 
-from pages.base_page import BasePage
-from locators import SIGNUP
+from framework.pages.base_page import BasePage
+from framework.locators import SIGNUP
 
 
 class SignUpPage(BasePage):

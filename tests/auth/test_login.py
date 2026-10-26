@@ -1,6 +1,6 @@
 import pytest
 
-from pages.login_page import LoginPage
+from framework.pages.login_page import LoginPage
 
 
 pytestmark = [pytest.mark.smoke, pytest.mark.regression, pytest.mark.login]

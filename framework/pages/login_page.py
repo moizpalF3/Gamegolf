@@ -1,7 +1,7 @@
-﻿import time
+import time
 
-from pages.base_page import BasePage
-from locators import LOGIN
+from framework.pages.base_page import BasePage
+from framework.locators import LOGIN
 
 # Screens the app can open on, checked in this order (the sign-up form comes
 # before the Log In form because both have an "Email Address" field).
@@ -25,7 +25,7 @@ class LoginPage(BasePage):
         The app can still be loading when a test starts, so a single quick
         check isn't enough to tell whether it's logged in.
         """
-        from pages.round_page import RoundPage
+        from framework.pages.round_page import RoundPage
 
         deadline = time.time() + timeout
         while True:
